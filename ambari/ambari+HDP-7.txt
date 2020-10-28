@@ -1,0 +1,286 @@
+### 所有节点都得设置 ###
+1.创建虚拟机
+2.查询 ip 地址
+3.使用 xshell 去链接虚拟机
+4.更改主机名	vim /etc/hostname
+5.配置主机映射	vim /etc/hosts
+6.ssh 免密通信，遇到的所有信息直接回车	ssh-keygen
+7.拷贝公钥		ssh-copy-id	主机名
+8.关闭防火墙
+	systemctl stop firewalld.service   # 关闭防火墙
+	systemctl status firewalld.service  # 查看防火墙状态
+	systemctl disable firewalld.service # 永久关闭防火墙
+9.关闭 SELINUX
+	# 执行该命令后重启机器生效---配置完全部内容后重启
+	vim /etc/sysconfig/selinux
+	将SELINUX=enforcing改为SELINUX=disabled
+10.安装 JDK，并配置 JAVA_HOME
+	# 配置环境变量
+		vim /etc/profile
+	# 配置如下
+		export JAVA_HOME=/opt/module/jdk1.8.0_261
+		export JRE_HOME=$JAVA_HOME/jre
+		export PATH=$JAVA_HOME/bin:$JRE_HOME/bin:$PATH	
+	# 刷新
+		source /etc/profile
+	# 测试
+		java
+11.修改 yum 源为阿里云镜像，并进入/etc/yum.repos.d/CentOS-Base.repo文件把所有的 http 改为 https 
+	 mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.baifen
+	curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo
+	# 生成缓存
+	yum makecache
+12.安装 ntp
+	yum install -y ntp
+	# 启动服务
+		systemctl stop ntp   # 关闭 ntp 服务
+		systemctl status ntpd  # 查看 ntp 服务的状态
+		systemctl disable ntpd # 永久关闭 ntp 服务
+		systemctl enable ntpd # 永久开启 ntp 服务
+		systemctl start ntpd.service # 启动 ntp 服务
+13.关闭 Linux 的 THP（透明大页）服务
+	# 查看是否启动 THP
+		cat  /sys/kernel/mm/transparent_hugepage/enabled
+			# 表示处于启用状态
+				[always] madvise never
+			# 处于关闭状态
+				always madvise [never]
+	# 编辑文件 /etc/rc.local
+		vim /etc/rc.local
+	# 添加如下内容
+		if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+		echo never > /sys/kernel/mm/transparent_hugepage/enabled
+		fi
+		if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+		echo never > /sys/kernel/mm/transparent_hugepage/defrag
+		fi
+	# 保存退出，然后赋予 rc.local 文件执行权限：
+		chmod +x /etc/rc.d/rc.local 
+14.配置用户目录初始权限
+	#配置 UMASK
+		umask 0022
+15.禁止离线更新
+	# centos7 的
+		vim /etc/yum/pluginconf.d/langpacks.conf
+		vim /etc/yum/pluginconf.d/fastestmirror.conf
+	# 修改下面的内容
+		enabled=0
+### 所有节点都得设置 ###
+
+## 主节点 ##
+16.搭建 Ambari 集群本地源
+	# 注意：一下操作主节点即可
+	# 制作本地源
+	#1. 配置 HTTPD 服务，并使 HTTPD 服务到系统层使其随系统自动启动
+	# centos7 命令
+		yum install -y systemctl httpd #下载 httpd 服务
+		systemctl stop httpd   #关闭
+		systemctl status httpd  #查看状态
+		systemctl enable httpd.service   #设置为开机自启
+		systemctl start httpd.service #启动服务
+		systemctl disable httpd.service #永久关闭
+	#2. 安装本地源制作相关工具
+		# 下载相关工具
+			yum -y install yum-utils createrepo yum-plugin-priorities
+		# 修改该文件
+			vim /etc/yum/pluginconf.d/priorities.conf
+		# 添加如下内容
+			gpgcheck=0
+	#3. 将下载的 3 个 tar 包解压到指定目录
+		# 上传文件到 /opt 目录，并 cd 到 /opt 目录
+		# ambri
+			tar -zxvf ambari-2.6.0.0-centos7.tar.gz -C /var/www/html/
+		# 创建hdp目录
+			mkdir /var/www/html/hdp
+		# HDP
+			tar -zxvf HDP-2.6.3.0-centos7-rpm.tar.gz -C /var/www/html/hdp/
+		# HDP-UTILS
+			tar -zxvf HDP-UTILS-1.1.0.21-centos7.tar.gz -C /var/www/html/hdp/
+	#4. 创建本地源
+		# 进入如下目录
+			cd /var/www/html/
+		# 执行如下命令
+			createrepo ./
+	#5. 将 Ambari 储存库文件下载到安装主机上的目录
+		curl -o /etc/yum.repos.d/ambari.repo http://public-repo-1.hortonworks.com/ambari/centos7/2.x/updates/2.6.0.0/ambari.repo
+	#6. 修改配置文件，配置为本地源
+
+		# 修改文件 ambari.repo，配置为本地源
+			vim /etc/yum.repos.d/ambari.repo
+			# 修改如下内容
+				[ambari-2.6.0.0]
+				name=ambari Version - ambari-2.6.0.0
+				baseurl=http://h1/ambari/centos7/2.6.0.0-267/
+				gpgcheck=0
+				gpgkey=http://h1/ambari/centos7/2.6.0.0-267/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins
+				enabled=1
+				priority=1
+
+			# 修改文件 hdp-util.repo，配置为本地源
+				vim /var/www/html/hdp/hdp-util.repo
+			# 修改如下内容
+				[HDP-UTILS-1.1.0.21]
+				name=Hortonworks Data Platform Version - HDP-UTILS-1.1.0.21
+				baseurl= http://h1/hdp/
+				gpgcheck=0
+				enabled=1
+				priority=1
+
+			# 修改文件 hdp.repo，配置为本地源
+				vim /var/www/html/hdp/HDP/centos7/2.6.3.0-235/hdp.repo
+			# 修改如下内容
+				[HDP-2.6.3.0]
+				name=HDP Version - HDP-2.6.3.0
+				baseurl=http://h1/hdp/HDP/centos7/2.6.3.0-235/
+				gpgcheck=0
+				gpgkey=http://h1/hdp/HDP/centos7/2.6.3.0-235/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins
+				enabled=1
+				priority=1
+				[HDP-UTILS-1.1.0.21]
+				name=HDP-UTILS Version - HDP-UTILS-1.1.0.21
+				baseurl=http://h1/hdp
+				gpgcheck=0
+				gpgkey=http://h1/hdp/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins
+				enabled=1
+				priority=1
+17.查看是否有 Ambari
+	yum repolist
+18.# 查看 Ambari 与 HDP 资源的资源库
+	# 也可以在浏览器查看
+		http://h1/ambari/centos7/
+		http://h1/ambari/centos7/2.6.0.0-267/
+		# 以下两行是在 ambari 中需要配置的
+			HDP: 			http://h1/hdp/HDP/centos7/2.6.3.0-235/
+			HDP-UTILS:		http://h1/hdp/
+19.(重要！) ***安装 MySQL ***
+# mysql 下载：官网5.7版本：https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar
+	# 1.rpm 查看 mariadb，是否存在，如果存在必须卸载
+		rpm -qa|grep mariadb
+			#如: mariadb-libs-5.5.65-1.el7.x86_64
+	# 2.卸载 mariadb
+		rpm -e --nodeps	mariadb-libs-5.5.65-1.el7.x86_64
+	# 3. 为了避免出现权限问题，给 mysql 解压文件所在目录赋予最大权限
+		# 在 opt 下创建 mysql 解压目录
+			mkdir mysql
+		# 设置 mysql 解压目录的权限
+			chmod -R 777 mysql
+
+		# 安装 MySQL 需要的一些依赖程序
+			yum -y install make gcc-c++ cmake bison-devel ncurses-devel libaio libaio-devel net-tools
+
+	#4. 解压 mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar 到/opt/mysql
+		tar -xvf mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar -C /opt/mysql/
+	#5. 严格按照顺序安装：
+		# mysql-community-common-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-libs-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-client-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-server-5.7.29-1.el7.x86_64.rpm这四个包
+		# cd 到 mysql 目录下，依次输入命令
+			1. rpm -ivh mysql-community-common-5.7.29-1.el7.x86_64.rpm
+			2. rpm -ivh mysql-community-libs-5.7.29-1.el7.x86_64.rpm
+			3. rpm -ivh mysql-community-client-5.7.29-1.el7.x86_64.rpm
+			4. rpm -ivh mysql-community-server-5.7.29-1.el7.x86_64.rpm
+	#6. 配置数据库
+		vim /etc/my.cnf
+		# 在 [mysqld] 下添加这三行
+			skip-grant-tables
+			character_set_server=utf8
+			init_connect='SET NAMES utf8'
+		# skip-grant-tables：跳过登录验证
+		# character_set_server=utf8：设置默认字符集UTF-8
+		# init_connect='SET NAMES utf8'：设置默认字符集UTF-8
+	#7. 启动服务
+		systemctl start mysqld.service #启动服务
+		systemctl disable mysql.service #关闭服务
+	#8. 启动 mysql
+		输入 mysql
+	#9. 先设置一个简单的临时密码
+		update mysql.user set authentication_string=password('root') where user='root';
+		# 立即生效
+			flush privileges;
+	#10. 退出（exit）mysql 再次登录
+		mysql -uroot -proot
+		# 重设密码
+			set password=password('root');
+		# 立即生效
+			flush privileges;
+	#11. 进入 mysql
+		mysql -uroot -proot
+		# 赋值权限
+			alter user user() identified by "root";
+		# 刷新
+			flush privileges;
+	#12. 使用 MySQL 数据库
+		use mysql;
+		# 查询 user 表
+			select User,Host from user;
+	#13. 修改 user 表，把 Host 表内容修改为 %
+		update user set host='%' where host='localhost';
+	#14. 删除 root 用户的其他 host
+		delete from user where Host='h1';
+		delete from user where Host='127.0.0.1';
+		delete from user where Host='::1';
+		# 刷新
+			flush privileges;
+		# 查询 user 表修改之后的结果
+			select User,Host from user;
+		# 退出
+## 主节点 ##
+
+### 安装 Ambari ###
+1.安装ambari-server
+	yum -y install ambari-server 
+2.拷贝mysql驱动
+	# 新建目录
+		mkdir /usr/share/java
+	# 拷贝文件到指定位置
+		cp /opt/mysql-connector-java-5.1.48.jar /usr/share/java/mysql-connector-java.jar
+	# 将 mysql-connector-java.jar 复制到 /var/lib/ambari-server/resources 目录下并改名为 mysql-jdbc-driver.jar
+		cp /usr/share/java/mysql-connector-java.jar  /var/lib/ambari-server/resources/mysql-jdbc-driver.jar
+	# 修改 ambari.properties 文件
+		vim /etc/ambari-server/conf/ambari.properties
+		# 添加如下内容
+			server.jdbc.driver.path=/usr/share/java/mysql-connector-java.jar
+	# 在 MySQL 中创建数据库
+		# 登录
+			mysql -uroot -proot
+		# 创建
+			create database ambari;
+	# 使用 Ambari 自带脚本创建表
+		#使用 ambari 数据库
+			use ambari;
+		# 导入 sql 数据
+			source /var/lib/ambari-server/resources/Ambari-DDL-MySQL-CREATE.sql
+	# 赋予用户 root 权限
+		grant all privileges on *.* to 'root'@'%' identified by 'root';
+		#刷新后退出
+			flush privileges;
+			exit
+	# 配置 Ambari
+		#执行设置程序
+			ambari-server setup
+### 安装 Ambari ###
+
+###	# 启动 Ambari # ###
+	# 启动命令
+		ambari-server start
+	# 停止命令
+		ambari-server stop
+###	# 启动 Ambari # ###
+
+# HDP集群部署
+	# 进入登陆页面
+		浏览器输入 http://h1:8080
+		默认管理员密码：admin
+
+#进入 ambari 后可能遇到的错误
+## 问题解决
+	降python版本
+	vim /etc/ambari-agent/conf/ambari-agent.ini
+		[security]
+		force_https_protocol=PROTOCOL_TLSv1_2
+	 
+	vim /etc/python/cert-verification.cfg 
+		[https] 
+		verify=disable
+	 
