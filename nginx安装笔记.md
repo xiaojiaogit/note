@@ -68,3 +68,16 @@ vi /etc/rc.local
 ```shell
 chmod 755 rc.local
 ```
+
+## 定时任务
+```shell
+/sbin/service crond start //启动服务
+
+/sbin/service crond stop //关闭服务
+
+/sbin/service crond restart //重启服务
+
+/sbin/service crond reload //重新载入配置
+
+/sbin/service crond status //启动服务
+```
