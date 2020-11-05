@@ -1,0 +1,823 @@
+----------------hadoop生态搭建上----------------
+2020-11-05
+ctf-mingwang
+>>>>>>>>>>>>>>>>本次演示使用14台集群，分布情况如下<<<<<<<<<<<<<<<<
+http://h1:50070         dn、nm、nn
+http://h2:50070         dn、nm、nn
+
+http://h3:8088          dn、nm、rm
+http://h4:8088          dn、nm、rm
+
+http://h5:19888         dn、nm、历史任务服务器、2nn
+http://h6               dn、nm、kafka
+http://h7               dn、nm、kafka
+
+http://h8               dn、nm、zookeeper
+http://h9               dn、nm、zookeeper
+http://h11              dn、nm、zookeeper
+
+http://h12              dn、nm、nginx、flume、kafka
+
+http://h13              dn、nm、hive服务端、hbase(master)
+http://h14              dn、nm、hive客户端、hbase
+http://h15              dn、nm、mysql、hbase
+
+>>>>>>>>>>>>>>>>准备工作<<<<<<<<<<<<<<<<
+此文档适配 centos6 && centos7 系统，以centos7为主 需要准备以下文件
+免密配置脚本：    sshs.sh
+java:           jdk-8u261-linux-x64.tar.gz
+scala:          scala-2.12.12.tgz
+hadoop:         hadoop-2.9.2.tar.gz
+zookeeper:      apache-zookeeper-3.5.8-bin.tar.gz
+hive:           apache-hive-1.2.2-bin.tar.gz
+hbase:          hbase-1.4.13-bin.tar.gz
+flume:          apache-flume-1.6.0-bin.tar.gz
+kafka:          kafka_2.12-2.4.1.tgz
+nginx:          nginx-1.10.1.tar.gz
+mysql:          jdk-8u261-linux-x64.tar.gz
+mysql驱动：      mysql-connector-java-5.1.48.jar
+
+用到的解压命令：
+tar xvf 包.tgz -C /opt/包名
+tar -zxvf 包.tar.gz  -C /opt/包名
+
+>>>>>>>>>>>>>>>>搭建工作<<<<<<<<<<<<<<<<
+需要安装的软件：
+yum -y install emacs
+
+主机名设置:
+emacs /etc/hostname
+&&
+emacs /etc/sysconfig/network
+
+配置主机映射:
+vim /etc/hosts
+
+使用sshs.sh脚本进行免密通信
+
+关闭防火墙
+	systemctl stop firewalld.service   # 关闭防火墙
+	systemctl status firewalld.service  # 查看防火墙状态
+	systemctl disable firewalld.service # 永久关闭防火墙
+&&
+    service iptables stop   关闭防火墙
+    chkconfig iptables off  永久关闭
+
+关闭 SELINUX
+	# 执行该命令后重启机器生效---配置完全部内容后重启
+	vim /etc/sysconfig/selinux
+	将
+    SELINUX=enforcing
+    改为
+    SELINUX=disabled
+
+上传对应服务tar包，并配置环境变量：
+解压：
+tar -zxvf 包名
+对解压后的tar文件进行重命名
+配置环境变量:
+vim /etc/profile
+配置如下:(java、scala、hadoop、zookeeper、hive、hbase、flume、kafka、sqoop、nginx)
+export JAVA_HOME=/opt/jdk
+export JRE_HOME=${JAVA_HOME}/jre
+export HADOOP_HOME=/opt/hadoop
+export ZOOKEEPER_HOME=/opt/zookeeper
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export HIVE_HOME=/opt/hive
+export HBASE_HOME=/opt/hbase
+export FLUME_HOME=/opt/flume
+export KAFKA_HOME=/opt/kafka
+export SCALA_HOME=/opt/scala
+export NGINX_HOME=/usr/local/nginx/sbin
+
+export PATH=${JAVA_HOME}/bin:$(SCALA_HOME)/bin${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:${ZOOKEEPER_HOME}/bin:${HIVE_HOME}/bin:${HBASE_HOME}/bin:${KYLIN_HOME}/bin:${KAFKA_HOME}/bin:${FLUME_HOME}/bin:$(NGINX_HOME)/sbin:$PATH
+
+刷新:
+source /etc/profile
+
+使用的是非阿里云主机需要修改 yum 源为阿里云镜（具体步骤）
+
+关闭 Linux 的 THP（透明大页）服务:
+查看是否启动 THP:
+cat  /sys/kernel/mm/transparent_hugepage/enabled
+# 表示处于启用状态
+[always] madvise never
+# 处于关闭状态
+always madvise [never]
+编辑文件 /etc/rc.local
+vim /etc/rc.local
+添加如下内容:
+if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi
+if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+fi
+保存退出，然后赋予 rc.local 文件执行权限：
+chmod +x /etc/rc.d/rc.local
+
+>>>>>>>>>>>>>>>>配置mysql工作<<<<<<<<<<<<<<<<
+***安装 MySQL ***
+mysql 下载：官网5.7版本：https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar
+1.rpm 查看 mariadb，是否存在，如果存在必须卸载
+rpm -qa|grep mariadb
+        如: mariadb-libs-5.5.65-1.el7.x86_64
+2.卸载 mariadb
+		rpm -e --nodeps	mariadb-libs-5.5.65-1.el7.x86_64
+3. 为了避免出现权限问题，给 mysql 解压文件所在目录赋予最大权限
+		在 opt 下创建 mysql 解压目录
+			mkdir mysql
+		设置 mysql 解压目录的权限
+			chmod -R 777 mysql
+        安装 MySQL 需要的一些依赖程序
+			yum -y install make gcc-c++ cmake bison-devel ncurses-devel libaio libaio-devel net-tools
+
+4. 解压 mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar 到/opt/mysql
+		tar -xvf mysql-5.7.29-1.el7.x86_64.rpm-bundle.tar -C /opt/mysql/
+5. 严格按照顺序安装：
+		# mysql-community-common-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-libs-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-client-5.7.29-1.el7.x86_64.rpm、
+		# mysql-community-server-5.7.29-1.el7.x86_64.rpm这四个包
+		# cd 到 mysql 目录下，依次输入命令
+        centos7：
+             rpm -ivh mysql-community-common-5.7.29-1.el7.x86_64.rpm
+			 rpm -ivh mysql-community-libs-5.7.29-1.el7.x86_64.rpm
+			 rpm -ivh mysql-community-client-5.7.29-1.el7.x86_64.rpm
+			 rpm -ivh mysql-community-server-5.7.29-1.el7.x86_64.rpm
+        centos6：
+			 rpm -ivh mysql-community-common-5.7.29-1.el7.x86_64.rpm
+			 rpm -ivh mysql-community-libs-5.7.29-1.el7.x86_64.rpm --force --nodeps
+			 rpm -ivh mysql-community-client-5.7.29-1.el7.x86_64.rpm --force --nodeps
+			 rpm -ivh mysql-community-server-5.7.29-1.el7.x86_64.rpm --force --nodeps
+6. 配置数据库
+		vim /etc/my.cnf
+		# 在 [mysqld] 下添加这三行
+skip-grant-tables
+character_set_server=utf8
+init_connect='SET NAMES utf8'
+		# skip-grant-tables：跳过登录验证
+		# character_set_server=utf8：设置默认字符集UTF-8
+		# init_connect='SET NAMES utf8'：设置默认字符集UTF-8
+7. 启动服务
+		systemctl start mysqld.service #启动服务
+		systemctl disable mysql.service #关闭服务
+8. 启动 mysql
+		输入 mysql
+9. 先设置一个简单的临时密码
+		update mysql.user set authentication_string=password('root') where user='root';
+		# 立即生效
+			flush privileges;
+10. 退出（exit）mysql 再次登录
+		mysql -uroot -proot
+		# 重设密码
+			set password=password('root');
+		# 立即生效
+			flush privileges;
+11. 进入 mysql
+		mysql -uroot -proot
+		# 赋值权限
+			alter user user() identified by "root";
+		# 刷新
+			flush privileges;
+12. 使用 MySQL 数据库
+		use mysql;
+		# 查询 user 表
+			select User,Host from user;
+13. 修改 user 表，把 Host 表内容修改为 %
+		update user set host='%' where host='localhost';
+14. 删除 root 用户的其他 host
+delete from user where Host='主机名';
+delete from user where Host='127.0.0.1';
+delete from user where Host='::1';
+		# 刷新
+			flush privileges;
+		# 查询 user 表修改之后的结果
+			select User,Host from user;
+		# 退出
+
+>>>>>>>>>>>>>>>>配置nginx工作<<<<<<<<<<<<<<<<
+安装依赖：
+yum -y install gcc-c++ pcre pcre-devel zlib zlib-devel openssl openssl-devel
+
+下载源码包：
+[官网](https://nginx.org/en/download.html)
+### 推荐使用下面的下载命令
+wget -c https://nginx.org/download/nginx-1.10.1.tar.gz
+
+解压：
+tar -zxvf nginx-1.10.1.tar.gz
+cd nginx-1.10.1
+
+使用默认配置即可：
+./configure
+
+编译安装：
+make
+make install
+
+查找安装路径：
+whereis nginx
+
+启动、关闭nginx的命令：
+cd /usr/local/nginx/sbin/
+./nginx             启动服务
+./nginx -s stop     关闭服务
+./nginx -s quit     退出服务
+./nginx -s reload   重新加载配置文件
+
+“ ./nginx -s quit:此方式停止步骤是待nginx进程处理任务完毕进行停止。”
+“ ./nginx -s stop:此方式相当于先查出nginx进程id再使用kill命令强制杀掉进程。”
+
+查询nginx进程：
+ps aux|grep nginx
+
+重启 nginx
+     1.先停止再启动（推荐）：
+     对 nginx 进行重启相当于先停止再启动，即先执行停止命令再执行启动命令。如下：
+        ./nginx -s quit
+        ./nginx
+
+重新加载配置文件：
+当 ngin x的配置文件 nginx.conf 修改后，要想让配置生效需要重启 nginx，使用-s reload不用先停止 ngin x再启动 nginx 即可将配置信息在 nginx 中生效，如下：
+./nginx -s reload
+
+启动成功后，在浏览器可以看到页面。
+
+开机自启动
+即在rc.local增加启动代码就可以了。
+vi /etc/rc.local
+
+增加一行： `/usr/local/nginx/sbin/nginx`
+设置执行权限：
+chmod 755 rc.local
+
+nginx与整合flume
+flume-ng agent -n a1 -c conf -f nginx-hdfs.conf -Dflume.root.logger=INFO,console
+         后台模式运行：
+         flume-ng agent -n a1 -c conf -f nginx-hdfs.conf -Dflume.root.logger=INFO,console &
+
+
+一下为flume 测试文件 nginx-hdfs.conf
+# 定义这个 agent 中各组件的名字
+producer.sources = s1
+producer.channels = c1
+producer.sinks = sk1
+
+producer.sources.s1.type = spooldir
+producer.sources.s1.spoolDir = /usr/local/nginx/logs/flume
+producer.sources.s1.fileHeader = true
+producer.sources.s1.batchSize = 100
+
+producer.channels.c1.type = memory
+producer.channels.c1.capacity = 1000000
+producer.channels.c1.transactionCapacity = 10000
+
+producer.sinks.sk1.type = hdfs
+producer.sinks.sk1.hdfs.path=hdfs://主机名/flume/%Y-%m-%d-%H
+producer.sinks.sk1.hdfs.filePrefix=events-
+producer.sinks.sk1.hdfs.fileSuffix = .log
+producer.sinks.sk1.hdfs.round = true
+producer.sinks.sk1.hdfs.roundValue = 1
+producer.sinks.sk1.hdfs.roundUnit = minute
+producer.sinks.sk1.hdfs.fileType=DataStream
+producer.sinks.sk1.hdfs.writeFormat=Text
+producer.sinks.sk1.hdfs.rollInterval=1
+producer.sinks.sk1.hdfs.rollSize=128
+producer.sinks.sk1.hdfs.rollCount=0
+producer.sinks.sk1.hdfs.idleTimeout=60
+producer.sinks.sk1.hdfs.useLocalTimeStamp = true
+
+producer.sources.s1.channels = c1
+producer.sinks.sk1.channel = c1
+
+>>>>>>>>>>>>>>>>配置zookeeper工作<<<<<<<<<<<<<<<<
+zoo.cfg 配置如下内容
+dataDir=/opt/zookeeper
+server.1=h1:2888:3888
+server.2=h2:2888:3888
+server.3=h3:2888:3888
+
+log4j.properties 配置如下内容
+zookeeper.log.dir=/opt/flum/logDir
+
+每台主机都需要设置id 需要注意的是没主机的id必须唯一  ---> myid <--- 默认没有需要我们在dataDir下自己创
+
+
+>>>>>>>>>>>>>>>>配置hadoop工作<<<<<<<<<<<<<<<<
+hadoop-env.sh 配置如下内容
+export JAVA_HOME=/opt/jdk
+export HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+
+core-site.xml 配置如下内容
+<configuration>
+
+<property>
+		<name>io.file.buffer.size</name>
+		<value>4096</value>
+</property>
+<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/opt/hadoop/tmp</value>
+</property>
+
+
+<property>
+        <!--指定hadoop集群在zookeeper上注册的节点名-->
+        <name>fs.defaultFS</name>
+        <value>hdfs://hacluster</value>
+    </property>
+
+
+	<property>
+        <!--指定zookeeper的存放地址 -->
+        <name>ha.zookeeper.quorum</name>
+        <value>h8:2181,h9:2181,11:2181</value>
+    </property>
+
+</configuration>
+
+hdfs-site.xml 配置如下内容
+<configuration>
+
+	<property>
+           <!--数据块默认大小128M-->
+           <name>dfs.block.size</name>
+           <value>134217728</value>
+        </property>
+        <property>
+            <!--副本数量，不配置的话默认为3-->
+            <name>dfs.replication</name>
+            <value>3</value>
+        </property>
+        <property>
+            <!--定点检查-->
+            <name>fs.checkpoint.dir</name>
+            <value>opt/hadoop/dfs/cname</value>
+        </property>
+        <property>
+            <!--namenode节点数据（元数据）的存放位置-->
+            <name>dfs.name.dir</name>
+            <value>opt/hadoop/dfs/namenode_data</value>
+        </property>
+        <property>
+            <!--datanode节点数据（元数据）的存放位置-->
+            <name>dfs.data.dir</name>
+            <value>opt/hadoop/dfs/datanode_data</value>
+        </property>
+        <property>
+            <!--指定secondarynamenode的web地址-->
+            <name>dfs.namenode.secondary.http-address</name>
+            <value>h5:50090</value>
+        </property>
+        <property>
+            <!--hdfs文件操作权限,false为不验证-->
+            <name>dfs.permissions</name>
+            <value>false</value>
+        </property>
+
+	<property>
+    <name>dfs.hosts</name>
+    <value>opt/hadoop/etc/hadoop/dn-include.conf</value>
+</property>
+
+<property>
+        <name>dfs.webhdfs.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>dfs.datanode.max.transfer.threads</name>
+        <value>4096</value>
+        </property>
+    <property>
+        <!--指定hadoop集群在zookeeper上注册的节点名-->
+        <name>dfs.nameservices</name>
+        <value>hacluster</value>
+    </property>
+    <property>
+        <!-- hacluster集群下有两个namenode，分别为nn1,nn2 -->
+        <name>dfs.ha.namenodes.hacluster</name>
+        <value>nn1,nn2</value>
+    </property>
+    <!-- nn1的rpc、servicepc和http通信 -->
+    <property>
+        <name>dfs.namenode.rpc-address.hacluster.nn1</name>
+        <value>h1:8020</value>
+    </property>
+    <property>
+        <name>dfs.namenode.servicepc-address.hacluster.nn1</name>
+        <value>h1:53310</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.hacluster.nn1</name>
+        <value>h1:50070</value>
+    </property>
+    <!-- nn2的rpc、servicepc和http通信 -->
+    <property>
+        <name>dfs.namenode.rpc-address.hacluster.nn2</name>
+        <value>h2:9000</value>
+    </property>
+    <property>
+        <name>dfs.namenode.servicepc-address.hacluster.nn2</name>
+        <value>h2:53310</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.hacluster.nn2</name>
+        <value>h2:50070</value>
+    </property>
+    <property>
+        <!-- 指定namenode的元数据在JournalNode上存放的位置 -->
+        <name>dfs.namenode.shared.edits.dir</name>
+        <value>qjournal://h8:8485;h9:8485;h11:8485/hacluster</value>
+    </property>
+    <property>
+        <!-- 指定JournalNode在本地磁盘存放数据的位置 -->
+        <name>dfs.journalnode.edits.dir</name>
+        <value>/opt/hadoop/dfs/journalnode_data</value>
+    </property>
+    <property>
+        <!-- namenode操作日志的存放位置 -->
+        <name>dfs.namenode.edits.dir</name>
+        <value>/opt/hadoop/dfs/edits</value>
+    </property>
+    <property>
+        <!-- 开启namenode故障转移自动切换 -->
+        <name>dfs.ha.automatic-failover.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- 配置失败自动切换实现方式 -->
+        <name>dfs.client.failover.proxy.provider.hacluster</name>
+            <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+    </property>
+    <property>
+        <!-- 配置隔离机制 -->
+        <name>dfs.ha.fencing.methods</name>
+        <value>sshfence</value>
+    </property>
+    <property>
+        <!-- 使用隔离机制需要SSH免密登录 -->
+        <name>dfs.ha.fencing.ssh.private-key-files</name>
+        <value>/root/.ssh/id_rsa</value>
+    </property>
+</configuration>
+
+mapred-site.xml 配置如下内容
+<configuration>
+
+	<property>
+            <!--指定mapreduce运行在yarn上-->
+            <name>mapreduce.framework.name</name>
+            <value>yarn</value>
+        </property>
+        <property>
+            <!--配置任务历史服务器IPC-->
+            <name>mapreduce.jobhistory.address</name>
+            <value>h5:10020</value>
+        </property>
+        <property>
+            <!--配置任务历史服务器web-UI地址-->
+            <name>mapreduce.jobhistory.webapp.address</name>
+            <value>h5:19888</value>
+        </property>
+
+	<property>
+        <!--开启uber模式-->
+        <name>mapreduce.job.ubertask.enable</name>
+        <value>true</value>
+    </property>
+
+</configuration>
+
+master 配置如下内容
+h1
+
+slaves 配置如下内容
+h1
+h2
+h3
+h4
+h5
+h6
+h7
+h8
+h9
+h11
+h12
+h13
+h14
+h15
+
+yarn-site.xml 配置如下内容
+<configuration>
+
+	<property>
+        <!-- 开启Yarn高可用 -->
+        <name>yarn.resourcemanager.ha.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- 指定Yarn集群在zookeeper上注册的节点名 -->
+        <name>yarn.resourcemanager.cluster-id</name>
+        <value>hayarn</value>
+    </property>
+    <property>
+        <!-- 指定两个ResourceManager的名称 -->
+        <name>yarn.resourcemanager.ha.rm-ids</name>
+        <value>rm1,rm2</value>
+    </property>
+    <property>
+        <!-- 指定rm1的主机 -->
+        <name>yarn.resourcemanager.hostname.rm1</name>
+        <value>h3</value>
+    </property>
+    <property>
+        <!-- 指定rm2的主机 -->
+        <name>yarn.resourcemanager.hostname.rm2</name>
+        <value>h4</value>
+    </property>
+    <property>
+        <!-- 配置zookeeper的地址 -->
+        <name>yarn.resourcemanager.zk-address</name>
+        <value>h8:2181,h9:2181,h11:2181</value>
+    </property>
+    <property>
+        <!-- 开启Yarn恢复机制 -->
+        <name>yarn.resourcemanager.recovery.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!-- 配置执行ResourceManager恢复机制实现类 -->
+        <name>yarn.resourcemanager.store.class</name>
+            <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
+    </property>
+    <property>
+        <!--指定主resourcemanager的地址-->
+        <name>yarn.resourcemanager.hostname</name>
+        <value>h3</value>
+    </property>
+    <property>
+        <!--NodeManager获取数据的方式-->
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+    <property>
+        <!--开启日志聚集功能-->
+        <name>yarn.log-aggregation-enable</name>
+        <value>true</value>
+    </property>
+    <property>
+        <!--配置日志保留7天-->
+        <name>yarn.log-aggregation.retain-seconds</name>
+        <value>604800</value>
+    </property>
+
+</configuration>
+
+
+>>>>>>>>>>>>>>>>配置flume工作<<<<<<<<<<<<<<<<
+flume-env.sh 配置java环境并开启jvm监控
+export JAVA_HOME=/opt/jdk
+export JAVA_OPTS="-Xms100m -Xmx2000m -Dcom.sun.management.jmxremote"
+
+编写脚本 myconf/nginx-hdfs.conf
+# 定义这个 agent 中各组件的名字
+a1.sources = s1
+a1.channels = c1
+a1.sinks = sk1
+
+a1.sources.s1.type = spooldir
+a1.sources.s1.spoolDir = /usr/local/nginx/logs/flume
+a1.sources.s1.fileHeader = true
+a1.sources.s1.batchSize = 100
+
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000000
+a1.channels.c1.transactionCapacity = 10000
+
+a1.sinks.sk1.type = hdfs
+a1.sinks.sk1.hdfs.path=hdfs://jiaojianying/flume/%Y-%m-%d-%H
+a1.sinks.sk1.hdfs.filePrefix=events-
+a1.sinks.sk1.hdfs.fileSuffix = .log
+a1.sinks.sk1.hdfs.round = true
+a1.sinks.sk1.hdfs.roundValue = 1
+a1.sinks.sk1.hdfs.roundUnit = minute
+a1.sinks.sk1.hdfs.fileType=DataStream
+a1.sinks.sk1.hdfs.writeFormat=Text
+a1.sinks.sk1.hdfs.rollInterval=1
+a1.sinks.sk1.hdfs.rollSize=128
+a1.sinks.sk1.hdfs.rollCount=0
+a1.sinks.sk1.hdfs.idleTimeout=60
+a1.sinks.sk1.hdfs.useLocalTimeStamp = true
+
+a1.sources.s1.channels = c1
+a1.sinks.sk1.channel = c1
+
+
+>>>>>>>>>>>>>>>>配置hive工作<<<<<<<<<<<<<<<<
+cp hive-env.sh.template hive-env.sh
+HADOOP_HOME=/opt/hadoop
+export HIVE_CONF_DIR=/opt/hive/conf
+
+cp hive-log4j.properties.template hive-log4j.properties
+hive.log.dir=/opt/hive/log
+
+cp hive-default.xml.template hive-default.xml
+对于 hive-default.xml 这个关键配置文件我们一般不做修改，这里我们对关键配置文件的副本 hive-site.xml 文件进行相应的配置(**默认情况下没有 hive-site.xml 这个文件，需要自己新建**)，内容如下，主要是配置存放元数据的 MySQL 的地址、驱动、用户名和密码等信息：
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+     <!-- 查询数据时 显示出列的名字 -->
+     <name>hive.cli.print.header</name>
+     <value>true</value>
+  </property>
+  <property>
+     <!-- 在命令行中显示当前所使用的数据库 -->
+     <name>hive.cli.print.current.db</name>
+     <value>true</value>
+  </property>
+  <property>
+     <!-- 默认数据仓库存储的位置，该位置为HDFS上的路径 -->
+     <name>hive.metastore.warehouse.dir</name>
+     <value>hive/warehouse</value>
+  </property>
+  <!-- 5.x -->
+  <property>
+            <name>javax.jdo.option.ConnectionURL</name>
+     <value>jdbc:mysql://h15:3306/hive_metastore?createDatabaseIfNotExist=true</value>
+  </property>
+  <!-- 8.x -->
+  <property>
+            <name>javax.jdo.option.ConnectionURL</name>
+     <value>jdbc:mysql://h15:3306/hive_metastore?createDatabaseIfNotExist=true&amp;useSSL=false&amp;serverTimezone=GMT</value>
+  </property>
+  <!-- 5.x -->
+  <property>
+     <name>javax.jdo.option.ConnectionDriverName</name>
+     <value>com.mysql.jdbc.Driver</value>
+  </property>
+  <!-- 8.x -->
+  <property>
+     <name>javax.jdo.option.ConnectionDriverName</name>
+     <value>com.mysql.cj.jdbc.Driver</value>
+  </property>
+  <property>
+     <name>javax.jdo.option.ConnectionUserName</name>
+     <value>root</value>
+  </property>
+  <property>
+     <name>javax.jdo.option.ConnectionPassword</name>
+     <value>root</value>
+  </property>
+</configuration>
+
+ cp mysql-connector-java-5.1.48.jar /opt/software/hive-1.2.2/lib/
+
+
+初始化元数据库:
+当使用的 hive 是 1.x 版本时，可以不进行初始化操作，Hive 会在第一次启动的时候会自动进行初始化，但不会生成所有的元数据信息表，只会初始化必要的一部分，在之后的使用中用到其余表时会自动创建；
+当使用的 hive 是 2.x 版本时，必须手动初始化元数据库。初始化命令：
+schematool 命令在安装目录的 bin 目录下，由于上面已经配置过环境变量，在任意位置执行即可
+           schematool -dbType mysql -initSchema
+这里我使用的是的 `apache-hive-1.2.2` 版本，可以跳过这一步。
+
+启动:
+由于已经将 Hive 的 bin 目录配置到环境变量，直接使用以下命令启动，成功进入交互式命令行后执行 `show databases` 命令，无异常则代表搭建成功。
+           hive
+在 MySQL 中也能看到 Hive 创建的库和存放元数据信息的表
+
+
+>>>>>>>>>>>>>>>>配置hbase工作<<<<<<<<<<<<<<<<
+修改安装目录下的 `conf/hbase-env.sh`,指定 JDK 的安装路径：
+export JAVA_HOME=/opt/jdk
+export HBASE_MANAGES_ZK=false
+
+修改安装目录下的 `conf/hbase-site.xml`，增加如下配置：
+<configuration>
+    <!-- 指定 HBase 以分布式模式运行 -->
+    <property>
+        <name>hbase.cluster.distributed</name>
+        <value>true</value>
+    </property>
+    <!-- 指定 HBase 数据存储路径为 HDFS 上的 hbase 目录,hbase 目录不需要预先创建，程序会自动创
+建 -->
+    <property>
+        <name>hbase.rootdir</name>
+        <value>hdfs://hacluster/hbase</value>
+    </property>
+    <!-- HBase临时数据存储目录 -->
+    <property>
+        <name>hbase.tmp.dir</name>
+        <value>/opt/hbase/tmp</value>
+    </property>
+    <!-- 指定 zookeeper 地址和端口 -->
+    <property>
+        <name>hbase.zookeeper.quorum</name>
+        <value>h8:2181,h9:2181,h11:2181</value>
+    </property>
+    <!-- zookeeper数据存放位置 -->
+    <property>
+        <name>hbase.zookeeper.property.dataDir</name>
+        <value>/opt/hbase/zookeeper_data</value>
+    </property>
+</configuration>
+
+修改安装目录下的 `conf/regionservers`，指定 region  servers 的地址，修改后其内容如下：
+h13
+h14
+h15
+
+`backup-masters` 这个文件是不存在的，需要新建，主要用来指明备用的 master 节点，可以是多个，这里以 1 个为例。
+h13
+
+HDFS客户端配置
+这里有一个可选的配置：如果您在 Hadoop 集群上进行了 HDFS 客户端配置的更改，比如将副本系数 `dfs.replication` 设置成 5，则必须使用以下方法之一来使 HBase 知道，否则 HBase 将依旧使用默认的副本系数 3 来创建文件：
+    将Hadoop的core-site.xml和hdfs-site.xml通过建立软链接的方式放置${HBASE_HOME}/conf目录下
+[root@h13 ~]$ ln -s /opt/hadoop/etc/hadoop/hdfs-site.xml /opt/hbase/conf/hdfs-site.xml
+[root@h13 ~]$ ln -s /opt/hadoop/etc/hadoop/core-site.xml /opt/hbase/conf/core-site.xml
+
+安装包分发
+将 HBase 的安装包分发到其他节点，分发后建议在这两台服务器上也配置一下 HBase 的环境变量。
+[root@h13 ~]$ scp -r /opt/hbase/ root@h14:/opt/software/
+[root@h13 ~]$ scp -r /opt/hbase/ root@h15:/opt/software/
+
+
+>>>>>>>>>>>>>>>>配置kafka工作<<<<<<<<<<<<<<<<
+在 Kafka 安装目录下创建`kafka-logs`文件夹（用来存储分区信息的，不要把它与存放错误日志的目录混淆了，日志目录是配置在 `log4j.properties` 文件 里的）
+[root@h12 ~]$ mkdir /opt/kafka/kafka-logs
+
+进入安装目录的 `config/` 目录下，修改配置文件`server.properties`：
+# broker的全局唯一标识号，不能重复. 给集群中的每个broker配置一个不同的id
+broker.id=0
+# 分区数据的存储位置
+log.dirs=/opt/kafka/kafka-logs
+# 连接Zookeeper集群地址
+zookeeper.connect=h8:2181,h9:2181,h11:2181
+
+分发安装包:
+分发之后需要修改 **broker.id( id 值一定不能重复 )**的值，同时建议其他节点的环境变量也配置下。
+[root@h12 ~]$ scp -r /opt/kafka/ root@h6:/opt
+[root@h12 ~]$ scp -r /opt/kafka/ root@h7:/opt
+
+
+>>>>>>>>>>>>>>>>集群启动<<<<<<<<<<<<<<<<<<
+#三个节点都启动Zookeeper服务
+[root@h8 ~]$ zkServer.sh start
+[root@h9 ~]$ zkServer.sh start
+[root@h11 ~]$ zkServer.sh start
+#启动Hadoop集群
+[root@h1 conf]$ start-dfs.sh
+[root@h3]$ start-yarn.sh
+
+#启动3个节点的kafka
+[root@h6]$ kafka-server-start.sh /opt/kafka/config/server.properties
+[root@h7]$ kafka-server-start.sh /opt/kafka/config/server.properties
+[root@h12]$ kafka-server-start.sh /opt/kafka/config/server.properties
+#启动HBase集群
+[root@h13 ~]$ start-hbase.sh
+
+#也可以分别启动HBase集群的各个进程
+[root@h14 ~]$ hbase-daemon.sh start master
+[root@h15 ~]$ hbase-daemon.sh start regionserver
+
+
+>>>>>>>>>>>>>>>>>>验证<<<<<<<<<<<<<<<<
+验证zookeeper启动是否成功
+使用jsp查看是否有相关进程
+
+验证hadoop启动是否成功
+网页访问ui界面：
+h1:50070
+h2:50070
+h3:8088
+h4:8088
+h5:19888
+
+验证flume启动是否成功
+[root@h12 ~]$ flume-ng agent -c conf/ -f /opt/flume/conf/myconf/nginx-hdfs.conf -n a1
+
+验证hive启动是否成功
+启动:
+由于已经将 Hive 的 bin 目录配置到环境变量，直接使用以下命令启动，成功进入交互式命令行后执行 `show databases` 命令，无异常则代表搭建成功。
+[root@h14 ~]$ hive
+在 MySQL 中也能看到 Hive 创建的库和存放元数据信息的表
+
+验证kafka启动是否成功
+创建测试kafka主题：
+[root@h12 ~]$ kafka-topics.sh --create --zookeeper h8:2181 --replication-factor 3 --partitions 1 --topic mingwang
+#kafka-topics.sh 任何和 topic 相关的操作都使用这个命令
+#--create 表示创建一个 topic
+#--zookeeper 指明任意一个 zookeeper 服务器地址
+#--replication-factor 表示每个 topic 的副本数. 注意: 副本数必须小于等于 kafka 集群的数量.
+#--partitions 这个 topic 的分区的数量
+#--topic 这个 topic 的名字.
+创建完成后可以使用以下命令查看创建的主题信息：
+[root@h12 ~]$ kafka-topics.sh --describe --zookeeper h8:2181 --topic mingwang
+可以看到分区 0 的有 0,1,2 三个副本，且三个副本都是可用副本，都在 ISR(in-sync Replica 同步副本) 列表中，其中 2 为首领副本，此时代表集群已经搭建成功。
+
+验证Hbase启动是否成功
+验证方式一 ：使用 `jps` 命令查看进程
+验证方式二 ：访问 HBase Web UI 界面
+可以看到 `Master` 在 h13 上，三个 `Region Servers` 分别在 h13，h14，和 h15 上，并且还有一个 `Backup Matser`服务在 h13 上。

@@ -1,0 +1,145 @@
+一组
+王婷 IP：39.97.251.226 密码：gz20201009MM
+崔慧兰 IP：39.97.233.245 密码：gz20201009MM
+贾博皓 IP：39.97.189.50 密码：gz20201009MM
+刘国伟 IP：39.97.246.110 密码：gz20201009MM
+
+二组
+焦建营 IP：ctf-mingwang.top 密码：gz20201009MM
+薄文艳 IP：39.97.238.188 密码：gz20201009MM
+孟涛 IP：182.92.0.158 密码：gz20201009MM
+周圆 IP：39.97.242.179 密码：gz20201009MM
+苗媛媛 IP：39.97.182.41 密码：gz20201009MM
+
+三组
+边懊回 IP：39.97.169.162 密码：gz20201009MM
+张英琦 IP：47.93.237.193 密码：gz20201009MM
+孙乐泉 IP：47.94.15.5 密码：gz20201009MM
+杨佳林 IP：47.94.36.113 密码：gz20201009MM
+
+四组
+
+
+五组
+
+
+六组
+刘晓阳 IP：47.94.9.35 密码：gz20201009MM
+郑浩 IP：39.97.186.122 密码：gz20201009MM
+白豪杰 IP: 123.57.50.37 密码：gz20201009MM
+
+七组
+张曼茹 IP：39.97.254.6 密码：gz20201009MM
+丁跃龙 IP：47.93.237.111 密码：gz20201009MM
+
+八组
+
+
+映射文件
+
+王婷 IP：39.97.251.226
+崔慧兰 IP：39.97.233.245
+贾博皓 IP：39.97.189.50
+刘国伟 IP：39.97.246.110
+
+123.56.16.219 jiaojianying
+39.97.238.188 bowenyan
+182.92.0.158 mengtao
+39.97.242.179 zhouyuan
+39.97.182.41 miaoyuanyuan
+
+
+39.97.169.162 bianaohui
+47.93.237.193 zhangyingqi
+47.94.15.5 sunlequan
+47.94.36.113 yangjialin
+
+
+47.94.9.35 liuxiaoyang
+39.97.186.122 zhenghao
+123.57.50.37 baihaojie
+
+39.97.254.6 zhangmanru
+47.93.237.111 dingyuelong
+
+
+
+ssh配置
+ssh-copy-id jiaojianying
+ssh-copy-id bowenyan
+ssh-copy-id mengtao
+ssh-copy-id zhouyuan
+ssh-copy-id miaoyuanyuan
+
+ssh-copy-id bianaohui
+ssh-copy-id zhangyingqi
+ssh-copy-id sunlequan
+ssh-copy-id yangjialin
+
+
+ssh-copy-id liuxiaoyang
+ssh-copy-id zhenghao
+ssh-copy-id baihaojie
+
+ssh-copy-id zhangmanru
+ssh-copy-id dingyuelong
+
+主机名
+jiaojianying
+bowenyan
+mengtao
+zhouyuan
+miaoyuanyuan
+
+bianaohui
+zhangyingqi
+sunlequan
+yangjialin
+
+liuxiaoyang
+zhenghao
+baihaojie
+
+zhangmanru
+dingyuelong
+
+
+功能分布
+http://mengtao                  hive服务端
+http://jiaojianying:50070       nn
+http://zhouyuan:50070           nn
+http://bowenyan:8088            rm
+http://miaoyuanyuan:8088        rm
+
+http://bianaohui                hive客户端
+http://zhangyingqi              dn、nm
+http://sunlequan                dn、nm
+http://yangjialin               dn、nm
+
+http://liuxiaoyang              flume、nginx
+http://zhenghao                 zookeeper
+http://baihaojie                zookeeper
+
+http://zhangmanru               zookeeper
+http://dingyuelong:19888        历史任务服务器、mysql
+
+--------------------------正式集群分布---------------------------
+http://jiaojianying:50070         nn
+http://zhouyuan:50070             nn
+
+http://bowenyan:8088              rm
+http://miaoyuanyuan:8088          rm
+
+http://dingyuelong:19888          dn、nm、历史任务服务器
+http://zhangyingqi                dn、nm
+http://sunlequan                  dn、nm
+
+http://zhenghao                   zookeeper
+http://baihaojie                  zookeeper
+http://yangjialin                 zookeeper
+
+http://liuxiaoyang                nginx、flume、kafka
+
+http://bianaohui                  hive服务端
+http://zhangmanru                 hive客户端
+http://mengtao                    mysql、hbase

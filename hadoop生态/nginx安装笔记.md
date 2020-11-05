@@ -1,15 +1,14 @@
 # nginx安装笔记
 
-## 软件安装
-
+## 安装依赖
 ```shell
-yum install gcc-c++ pcre pcre-devel zlib zlib-devel openssl openssl-devel
+yum -y install gcc-c++ pcre pcre-devel zlib zlib-devel openssl openssl-devel
 ```
 ## 下载源码包
 [官网](https://nginx.org/en/download.html)
 ### 推荐下载命令
 ```shell
-wget -c https://nginx.org/download/nginx-1.10.1.tar.gzwget -c https://nginx.org/download/nginx-1.10.1.tar.gz
+wget -c https://nginx.org/download/nginx-1.10.1.tar.gz
 ```
 
 ### 减压
@@ -33,7 +32,7 @@ whereis nginx
 ## 启动、关闭nginx
 ```shell
 cd /usr/local/nginx/sbin/
-./nginx 
+./nginx
 ./nginx -s stop
 ./nginx -s quit
 ./nginx -s reload
@@ -80,4 +79,51 @@ chmod 755 rc.local
 /sbin/service crond reload //重新载入配置
 
 /sbin/service crond status //启动服务
+```
+## flume后台运行
+flume-ng agent -n a1 -c conf -f nginx-hdfs.conf -Dflume.root.logger=INFO,console &
+
+
+## 查看端口占用情况
+netstat -ntpl |grep java
+
+
+netstat -tln | grep 8000
+sudo lsof -i:8000
+kill -9 850
+
+
+## flume 脚本
+```shell
+# 定义这个 agent 中各组件的名字
+producer.sources = s1
+producer.channels = c1
+producer.sinks = sk1
+
+producer.sources.s1.type = spooldir
+producer.sources.s1.spoolDir = /usr/local/nginx/logs/flume
+producer.sources.s1.fileHeader = true
+producer.sources.s1.batchSize = 100
+
+producer.channels.c1.type = memory
+producer.channels.c1.capacity = 1000000
+producer.channels.c1.transactionCapacity = 10000
+
+producer.sinks.sk1.type = hdfs
+producer.sinks.sk1.hdfs.path=hdfs://jiaojianying/flume/%Y-%m-%d-%H
+producer.sinks.sk1.hdfs.filePrefix=events-
+producer.sinks.sk1.hdfs.fileSuffix = .log
+producer.sinks.sk1.hdfs.round = true
+producer.sinks.sk1.hdfs.roundValue = 1
+producer.sinks.sk1.hdfs.roundUnit = minute
+producer.sinks.sk1.hdfs.fileType=DataStream
+producer.sinks.sk1.hdfs.writeFormat=Text
+producer.sinks.sk1.hdfs.rollInterval=1
+producer.sinks.sk1.hdfs.rollSize=128
+producer.sinks.sk1.hdfs.rollCount=0
+producer.sinks.sk1.hdfs.idleTimeout=60
+producer.sinks.sk1.hdfs.useLocalTimeStamp = true
+
+producer.sources.s1.channels = c1
+producer.sinks.sk1.channel = c1
 ```
