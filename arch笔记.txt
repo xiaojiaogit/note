@@ -125,6 +125,11 @@ sddm是桌面窗口管理器，用于在xorg环境下启动plasma并显示GUI界
     sudo pacman -Syu
 
 
+-------安装桌面环境-2-------
+安装kde桌面、kde桌面应用：
+sudo pacman -S plasma kde-applications
+
+
 =============================常用软件安装=============================
 sudo pacman -S screenfetch   在终端显示系统信息
 sudo emacs ~/.bashrc  将screenfetch加进入，可以实现每次打开终端都会运行【加到行尾就可以】
@@ -160,6 +165,28 @@ sudo pacman -S baidunetdisk
 sudo pacman -S deepin.com.thunderspeed
 安装net-tools包含ifconfig等命令
 sudo pacman -S net-tools
+查看命令的软件：
+sudo pacman -S man
+
+=============================驱动安装=============================
+安装触控板驱动：
+sudo pacman -S xf89-input-synaptics
 
 
-=============================我复活=============================
+=============================一些反人类的操作====================
+修改键盘布局：loadkeys colemak
+修改ctrl键位：emacs keys.conf
+
+
+ln -s 创建一个软链接，用来使用visudo，体验人生的真谛
+ln -s /usr/bin/vim /usr/bin/emacs
+
+查看当前的联网设备：
+ip link
+ip link set 网卡名 up   开启网卡
+iwlist 网卡名 scan     扫描网卡下的wifi
+iwlist 网卡名 scan | grep ESSID   过滤网络名称
+wpa_supplicant wifi名称 密码 > internet.conf  生成联网的配置文件
+wpa_supplicant -c internet.conf -i 网卡名 &     在后台通过配置文件联网
+dhcpcd &   动态分派ip地址
+timedatectl set-ntp true     同步系统时间
