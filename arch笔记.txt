@@ -1,0 +1,165 @@
+arch学习笔记
+=============================启动盘准备=============================
+
+去官网下载镜像：www.archlinux.org
+准备一个u盘
+
+=============================安装方式1-u系=============================
+1、格式化u盘
+2、启动vmware
+3、选择其他linux更高版本64位
+4、调整系统内存、调大一点
+5、移除我们创建的硬盘
+6、选择对应的usb控制器
+7、启动虚拟机连接usb设备，回车安装系统
+8、输入：lsblk 查看u盘的名称
+9、键入：cfdisk /dev/u盘名称，对u盘进行分区
+10、选择Dos分区类型（MBR启动更简单）
+11、方向键控制：
+    选择New回车prmary（主分区）回车
+    你可以创建多个分区
+    但u盘空间并不大，所以这里就创建一个
+12、选择Bootable（启动标识）
+    选择Write键入yes确认
+13、选择quit推出分区
+14、格式化分区 mkfs 命令 这里选择 ext4
+    mkfs。ext4 /dev/u盘名称
+15、使用mount命令 挂载U盘分区
+    mount /dev/u盘名称 /mnt
+16、使用emacs编辑器修改镜像更新源
+    emacs /etc/pacman.d/mirrorlist
+    可以使用宏移动所有的China源到最前
+17、使用pacstrap命令安装系统组件
+    pacstrap /mnt base linux linux-firmware baes-devel
+18、键入arch-chroot /mnt 进入系统控制台
+20、使用pacman包管理器、安装系统引导工具grub
+    pacman -S grub
+21、将Grub安装到u盘
+    grub-install --target=i389-pc /dev/u盘名称
+22、生成默认配置文件
+    grub-mkconfig -o /boot/grub/brub.cfg
+23、exit推出控制台，生成文件系统信息
+    genfstab /mnt > /mnt/etc/fstab
+24、安装网络组件
+    pacstrap /mnt dhcpcd wpa_supplicant networkmanager
+25、进入arch控制台，依次启动网络服务，格式：
+    arch-chroot /mnt
+    systemctl enable dhcpcd
+    systemctl enable wpa_supplicant
+    systemctl enable NetworkManager
+26、关机完成安装
+    poweroff
+
+
+=============================美化=============================
+安装后进行系统优化
+sudo pacman -S emacs git   安装编辑器，克隆https://ctf-mingwang/github/.emacs.d
+使用emacssudo修改sudo配置，删除wheel前的注释，开放wheel组权限以便我们创建新账户，密码那一项不用放开。
+添加一个新用户：
+useradd -G wheel -m mingwang
+修改密码：
+passwd mingwang
+passwd root
+
+-------安装桌面环境-------
+plasma-meta 是桌面环境
+sddm是桌面窗口管理器，用于在xorg环境下启动plasma并显示GUI界面
+    sudo pacman -S plasma-meta sddm
+启动sddm
+    systemctl enable sddm服务
+安装xorg来启动图形化界面
+    sudo pacman -S xorg
+重启完成基本安装
+    reboot
+
+进入TTy界面
+    ctrl + F2
+登录后先安装kdr桌面的音频组件：
+    sudo pacman -S alsa-utils pulseaudio pulseaudio-alsa
+安装kde桌面的软件包：
+    sudo pacman -S kde-applications-meta
+安装google的noto字体（中文）：
+    sudo pacman -S nota-fonts-cjk noto-fonts noto-fonts-emoji
+修改语言区域配置：
+    sudo emacs /etc/locale.gen
+    将
+    en_US utf8 utf8
+    zh_CN utf8 utf8
+    zh_TW utf8 utf8
+    前的#去掉
+生成新的语言数据：
+    sudo locale-gen
+返回图形界面：
+    ctrl + alt + F1
+    进入设置
+    添加中文语言
+    修改中国上海时区
+    并设置为自动修改
+    点击 Regional Settings
+    挨着排的往下设置
+重启完成基础配置
+
+修改主机名：
+    sudo emacs /etc/hostname
+设置软件包下载源：
+    sudo emacs /etc/pacman.conf
+包管理器 小彩蛋：
+     将Color的注释删除，并在下面添加一行 ILoveCandy 因为吃豆人喜欢吃糖，修改完成后在终端显示的文件传输图行会被模拟成吃豆人游戏图像
+     将 multilib 下载源开启，方便以后下载软件包时使用
+     在下面添加一个更新源：
+     [archlinuxcn]
+     Server = https://mirrors.tuna.tsinghua.edu.cn/archlinuxcn/$arch
+安装密钥环：
+    依次执行以下命令
+    sudo pacman -Syu haveged
+    systemctl start haveged
+    systemctl enable haveged
+
+    rm -rf /etc/pacman.d/gnupg
+    sudo pacman-key --init
+    sudo pacman-key --populate archlinux
+    sudo pacman-key --populate archlinuxcn
+
+    sudo pacman -S archlinuxcn-keyring
+每天更新一下系统：
+    sudo pacman -Syu
+
+
+=============================常用软件安装=============================
+sudo pacman -S screenfetch   在终端显示系统信息
+sudo emacs ~/.bashrc  将screenfetch加进入，可以实现每次打开终端都会运行【加到行尾就可以】
+sudo pacman -S cmatrix     代码雨
+安装google输入法
+sudo pacman -S fcitx-im
+sudo pacman -S fcitx-configtool
+sudo pacman -S fcitx-googlepinyin
+添加配置文件
+sudo emacs ~/.xprofile
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS="@im=fcitx"
+安装google浏览器
+sudo pacman -S google-chrome
+安装DeepinQQ
+sudo pacman -S deepin.com.qq.im
+安装云音乐
+sudo pacman -S netease-cloud-music
+安装深度截图
+sudo pacman -S deepin-screenshot
+安装深度录屏
+sudo pacman -S deepin-screen-recorder
+安装WPS办公软件
+sudo pacman -S wps-office ttf-wps-fonts
+安装深度视频播放器
+sudo pacman -S deepin-movie
+安装有道词典
+sudo pacman -S youdao-dict
+安装百度网盘
+sudo pacman -S baidunetdisk
+安装迅雷
+sudo pacman -S deepin.com.thunderspeed
+安装net-tools包含ifconfig等命令
+sudo pacman -S net-tools
+
+
+=============================我复活=============================
