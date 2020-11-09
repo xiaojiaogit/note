@@ -153,11 +153,11 @@ CDH安装包下载地址：  http://archive.cloudera.com/cdh5/parcels/5.15.0/
 
 1、安装Cloudera Manager Server&Agent
 文件上传的目录mkdir cdh
-cd cdh
+cd mycdh
 (三台机器都要安装) tar xvzf cloudera-manager-centos7-cm5.15.0_x86_64.tar.gz  -C /opt
 
 2、cp文件
-cd /opt/cdh
+cd /opt/mycdh
 cp CDH* /opt/cloudera/parcel-repo/
 cp manifest.json /opt/cloudera/parcel-repo/
 cd /opt/cloudera/parcel-repo/
@@ -168,18 +168,16 @@ useradd --system --home=/opt/cm-5.15.0/run/cloudera-scm-server/ --no-create-home
 
 4、设置权限
 cd /opt
-chmod -R cloudera-scm:cloudera-scm c*
+chown -R cloudera-scm:cloudera-scm c*
 
 5、server_host配置为server的名字；
-vim   /opt/cm-5.15.0/etc/cloudera-scm-agent/config.ini   中 server_host(三台机器)
+vim   /opt/cm-5.15.0/etc/cloudera-scm-agent/config.ini   中 server_host(三台机器)  端口： 7182
 
 6、拷贝mysql驱动
 # 新建目录
 	mkdir /usr/share/java
 # 拷贝文件到指定位置
 	cp /opt/mysql-connector-java-5.1.48.jar /usr/share/java/mysql-connector-java.jar
-# 将 mysql-connector-java.jar 复制到 /var/lib/ambari-server/resources 目录下并改名为 mysql-jdbc-driver.jar
-	cp /usr/share/java/mysql-connector-java.jar  /var/lib/ambari-server/resources/mysql-jdbc-driver.jar
 
 7、初始化cm数据库:   
 cd /opt/cm-5.15.0/share/cmf/schema/
@@ -199,7 +197,7 @@ scp -r jiaojianying:/opt/cm-5.15.0 /opt/
 c1:执行    ./opt/cm-5.15.0/etc/init.d/cloudera-scm-server start
 c1,2,3:   执行  ./opt/cm-5.15.0/etc/init.d/cloudera-scm-agent start
 service服务启动需要几分钟，取决于服务器的性能，此时我们可以使用
-netstat -apn|grep 7180 || netstat -lntp 查看端口占用情况
+netstat -apn|grep 7182 || netstat -lntp 查看端口占用情况
 
 11、登录
 http://c1:7180
@@ -207,8 +205,8 @@ admin admin
 
 12、服务选择impala的内核
 
-
-以下内容为选择操作：
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+******以下内容为选择操作：******
 0、Server&Agent开机自启动服务
 将/opt/cm-5.15.0/etc/init.d/目录下的cloudera-scm-server服务器启动脚本和cloudera-scm-agent代理服务启动脚本复制到/etc/init.d/目录下面。（/etc/init.d/目录用于存放开机启动脚本的目录）
 
