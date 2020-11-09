@@ -143,3 +143,6 @@ http://liuxiaoyang                nginx、flume、kafka
 http://bianaohui                  hive服务端
 http://zhangmanru                 hive客户端
 http://mengtao                    mysql、hbase
+
+
+jiaojianying bowenyan mengtao zhouyuan miaoyuanyuan bianaohui zhangyingqi sunlequan yangjialin liuxiaoyang zhenghao baihaojie zhangmanru dingyuelong

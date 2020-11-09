@@ -294,6 +294,9 @@ producer.sinks.sk1.channel = c1
 >>>>>>>>>>>>>>>>配置zookeeper工作<<<<<<<<<<<<<<<<
 zoo.cfg 配置如下内容
 dataDir=/opt/zookeeper
+
+quorumListenOnAllIPs=true
+
 server.1=h1:2888:3888
 server.2=h2:2888:3888
 server.3=h3:2888:3888
