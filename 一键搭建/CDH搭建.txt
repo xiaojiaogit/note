@@ -190,7 +190,9 @@ show databases;
 看到cm就表示ok了。
 
 9、给所有集群分发cm-5.15.0
-scp -r jiaojianying:/opt/cm-5.15.0 /opt/
+scp -r jiaojianying:/opt/cm-5.15.0 mengtao:/opt/
+scp -r jiaojianying:/opt/cm-5.15.0 dingyuelong:/opt/
+scp -r jiaojianying:/opt/cm-5.15.0 bianaohui:/opt/
 
 10、启动CM Manager&Agent服务
 先确保启动了mysql  service mysqld start
