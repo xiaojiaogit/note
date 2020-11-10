@@ -73,13 +73,58 @@ create table student5 (id int, name string) row format delimited fields terminat
 '''
 ##### 外部表
 '''mysql
-
-
+create external table student5 (id int, name string) row format delimited fields terminated by '\t' location 'student';
 '''
-#### 分区表
+
+##### 管理表与外部表的转换
 '''mysql
-
-
+alter table student5 set tblproperties('EXTERNAL'='TRUE');
+# 管理表转外部表
+'''
+#### 分区表(可以细化我们管理数据的粒度)
+> 体现在分层，作用是减少了全表扫描的概率，一定程度上可以看作是索引
+##### 创建分区
+'''mysql
+# 一级分区表
+create table dept_partition(deptno int, dname string, loc string) partitioned by (month string) row format delimited fields terminated by '\t';
+# 往一级分区表里导入本地数据
+load data local inpath '/opt/module/datas/dept/txt' into table default.dept_partition partition(month='201709');
+# 二级分区表
+create table dept_partition2(deptno int, dname string, loc string) partitioned by (month string, day string) row format delimited fields terminated by '\t';
+# 往二级分区表里导入本地数据
+load data local inpath '/opt/module/datas/dept/txt' into table default.dept_partition partition(month='20170905');
+'''
+##### 按分区查询数据
+###### 单分区查询
+'''mysql
+select * from dept_partition where month='201709';
+'''
+###### 多分区联合查询
+'''mysql
+select * from dept_partition where month='201709' union select * from dept_partition where month='201708';
+'''
+##### 增加分区
+'''mysql
+# 创建单个分区
+alter table dept_partition add partition(month='201706');
+# 同时创建多个分区
+alter table dept_partition add partition(month='201707') partition(month='20178');
+'''
+##### 删除分区
+'''mysql
+# 删除单个分区
+alter table dept_partition drop partition (month='201706');
+# 同时删除多个分区
+alter table dept_partition drop partition (month='201706'), partition (month='201707');
+'''
+##### 查询分区
+###### 查询分区表有多少分区
+'''mysql
+show partitions dept_partition;
+'''
+###### 查询分区表结构
+'''mysql
+desc formatted dept_partition;
 '''
 #### 修改表
 '''mysql
