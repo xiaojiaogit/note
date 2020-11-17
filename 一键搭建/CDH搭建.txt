@@ -135,6 +135,7 @@ delete from user where Host='c1';
 delete from user where Host='127.0.0.1';
 delete from user where Host='::1';
 # 刷新
+GRANT ALL PRIVILEGES ON *.* TO root@"%" IDENTIFIED BY "root"; 
 	flush privileges;
 # 查询 user 表修改之后的结果
 	select User,Host from user;
