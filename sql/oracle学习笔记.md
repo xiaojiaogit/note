@@ -890,26 +890,6 @@ PROXY_USER=
 
 PROXY_PWD=
 '''
-'''shell
-# 需要修改的内容
-oracle.install.option=INSTALL_DB_AND_CONFIG
-ORACLE_HOSTNAME=mingwang
-UNIX_GROUP_NAME=oinstall
-INVENTORY_LOCATION=/home/oracle/tools/oraInventory
-SELECTED_LANGUAGES=en,zh_CN
-ORACLE_HOME=/home/oracle/tools/oracle11g/product/11.2.0/dbhome_1
-ORACLE_BASE=/home/oracle/tools/oracle11g
-oracle.install.db.InstallEdition=EE
-oracle.install.db.DBA_GROUP=dba
-oracle.install.db.OPER_GROUP=oper
-oracle.install.db.config.starterdb.type=GENERAL_PURPOSE
-oracle.install.db.config.starterdb.globalDBName=orcl
-oracle.install.db.config.starterdb.SID=orcl
-oracle.install.db.config.starterdb.characterSet=AL32UTF8
-oracle.install.db.config.starterdb.installExampleSchemas=false
-oracle.install.db.config.starterdb.password.ALL=Oracle#toor
-oracle.install.db.config.starterdb.dbcontrol.emailAddress=test@163.com
-'''
 
 ##### 静默安装Oracle 11gR2
 操作用户：oracle
