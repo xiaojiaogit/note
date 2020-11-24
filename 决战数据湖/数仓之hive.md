@@ -325,7 +325,7 @@ create table if not exists mw.mw_test (name string);
 
 #### 创建外表（工作中使用最多的）
 '''sql
-create extenal table if not exists mw.mw_test2 (name string);
+create external table if not exists mw.mw_test2 (name string);
 '''
 
 #### hive内表和外表的区别
@@ -350,3 +350,60 @@ insert overwrite table emp select * from emp_2;
 insert overwrite table emp partition(day=YYYYMMDD) select * from emp_2;
 '''
 ### 修改表结构 alter add paritition...
+
+### hive导出数据(导出数据一定要指定建表时的分割符，不然会又隐形的格式)
+'''sql
+# 数据导出到hdfs
+insert overwrite directory '/datas/hive/output' select * from mw_stu;
+# 数据导出到本地
+insert overwrite local directory '/root/hive/output' select * from mw_stu;
+
+'''
+
+### 备份 （会保存数据和元数据）
+'''sql
+export table mw_stu to '/datas/hive/output/bak';
+# 导入备份的文件
+improt from '/datas/hive/output/bak';
+'''
+### hive查询
+'''sql
+SELECT [ALL | DISTINCT] select_expr, select_expr, ...
+FROM table_reference
+[WHERE where_condition]
+[GROUP BY col_list [HAVING condition]]
+[ CLUSTER BY col_list
+| [DISTRIBUTE BY col_list] [SORT BY| ORDER BY col_list]
+]
+[LIMIT number]
+'''
+
+### hive分区(将一个大文件，拆分成多个小文件)
+
+- 创建分区表
+
+'''sql
+create table if not exists mw_test3 (
+    id int,
+    name string,
+    age int
+)partitiones by (day string)
+row format delimited fields terminated by '\t'
+location '/datas/hive/input/ODS/01/nihao'
+'''
+
+- 创建一个表带多个分区
+
+'''sql
+create table if not exists mw_test3 (
+    id int,
+    name string,
+    age int
+)partitiones by (day string, clde string)
+row format delimited fields terminated by '\t'
+location '/datas/hive/input/ODS/01/nihao'
+'''
+
+注意：前后两个分区的关系为父子关系
+
+### hive函数
