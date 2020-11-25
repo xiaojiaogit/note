@@ -406,4 +406,501 @@ location '/datas/hive/input/ODS/01/nihao'
 
 注意：前后两个分区的关系为父子关系
 
+#### 查看分区
+'''sql
+show partitions mw_stu;
+'''
+#### 添加分区
+'''sql
+alter table mw_stu add partition (day='20201125');
+'''
+
+#### 删除分区
+'''sql
+alter table mw_stu drop partition (day='20201125');
+'''
+
+#### 分区分类，两个维度（数量和精准度）:
+(深度)数量>单分区和多分区
+(维度)精确度>静态分区(我们给这个分区指定了一个值)和动态分区(文件里存在分区字段的值，我们就可以使用动态分区，直接指定分区名即可)
+'''sql
+# 静态分区插入数据案例
+insert overwrite table mw_stu partition(day='20201124') select * from mw_stu;
+# 动态分区插入数据案例
+insert overwrite table mw_stu partition(day) select * from mw_stu;
+'''
+#### 注意:
+hiv默认是没有开启动态分区的，我们可以通过以下命令手动开启。
+'''shell
+set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrice;
+'''
+
+#### 有时我们为了对一些内容保密，那么我们会用到一下的方式，但一般情况不会用它。
+'''sql
+alter table mw_stu add partition (day='20201124') location 'mingwang';
+'''
+
 ### hive函数
+#### hive的内置函数
+[官方文档](https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF)
+**在hive里查看内置函数**
+'''sql
+# 查看系统自带函数
+show functions;
+
+# 显示自带函数的用法
+desc function upper;
+
+# 详细显示自带函数的用法
+desc function extended year;
+
+# 常用内置函数
+## 字符串连接函数
+select count('a','b','c');
+select count('_','a','b','c')
+
+## 类型转换（有去0的附带功能）
+select cast(1.555 as int);
+
+## 获取分区范围
+a [NOT] BETWEEN b AND c
+select * from mw_stu where day between 20201124 and 20201125;
+
+## 获取时间戳(可以直接在函数后进行运算)
+unix_timestamp()
+selecr unix_timestamp() from mw_stu;
+
+## 将YYYY-MM-DD的这种数据的格式转换为毫秒数
+unix_timestamp(string data)
+unix_timestamp('2009-03-20','yyyy-MM-dd')=1237532400;
+
+## 获取当前时间的年月(可以直接在函数后进行运算)
+year(string date)
+month(string date)
+day(string date) dayofmonth(date)...day("1970-11-01 00:00:00")=1,day("1970-11-01")=1.
+hour(string date)hour('2009-07-30 12:58:59')=12,hour('12:58:59')=12.
+
+## 当前时间加减
+### 减时间
+date_sub(date/timestamp/string startdate, tinyint/smallint/int days)
+
+### 加时间
+date_add(date/timestamp/string startdate, tinyint/smallint/int days)
+
+### 最后一天
+last_day(string date)
+
+### 某个时间段内
+months_between(date1, date2)-->months_between('1997-02-28 10:30:00', '1996-10-30')=3.94959677
+
+## 判断
+case a when b then c [when d then e] * from [else f] end
+case
+when a=b then c
+when ...
+end
+
+## 拼接字符串
+### 无缝拼接
+concat(string|binary a, string|binary b,...)
+### 指定分割符拼接
+concat_ws(string SEP, string a,string b,...)
+
+## 补0(在指点前补足位数)
+lpad(string str, int len, string pad)
+
+## 截取函数
+substr(string|binary a, int start, int len) substring(string|binary a, int start, int len)
+substr('foobar', 4, 1) results in 'b'
+
+## 聚合函数
+count()
+sum()
+min()
+max()
+
+## 连接函数
+join
+inner join   --内连接是最常见的一种连接，只连接匹配的行 inner join 与 join 相同
+
+left join
+right join
+
+full join   --笛卡尔积
+
+union       --将数据去重后将两张表进行整合
+union all   --不去重，对两张表进行整合
+
+## wordcount
+
+'''
+> left join 和union、union all 使用的较多
+
+#### hive窗口函数(重点中的重点)
+聚合函数 + over()
+'''sql
+# 语法如下：
+<窗口函数> over(partition by <用于分组的列名> order by <用来排序的列名>)
+
+# 分类
+1.专用窗口函数，包括后面要提到的rank，dense_rank，row_number等专用窗口函数。
+2.聚合函数，如sum，avg，count，max，min等因为窗口函数是对where或者group by 子句处理后的结果进行操作，所以窗口函数原则上只能写在select子句中。
+
+'''
+
+- 专用窗口函数
+
+rank函数：如果有并列名次的行，会占用一下名次的位置。比如正常排名是1，2，3，4，5，但是现在前3名是并列的名次，结果是：1，1，1，4，5。
+
+dense_rank函数：如果有并列名次的行，不占用下一名次的位置。比如正常排名是1，2，3，4，5，但是现在前三名是并列的名次，结果是：1，1，1，2，3。
+
+row_number函数：不考虑并列名次的情况。比如前三名是并列的名次，排名是正常的1，2，3，4，5。
+
+- 聚合函数
+
+在窗口函数中，是对自身记录、及位于自身记录以上的数据进行求和的结果。不仅是sum求和，平均、计数、最大值、最小值，也是同理，都是针对自身记录、以及自身记录之上的所有数据进行计算，现在再结合刚才得到的结果。
+
+聚合函数作为窗口函数，可以在每一行的数据里直观的看到，截至到本行数据，统计数据是多少（最大值、最小值等）。同时可以看出每一行数据，对整体统计数据的影响。
+
+#### 开户日需求，思路
+'''sql
+set hive.support.quoted.identifiers=none;
+
+--- 准备数据（kh.txt）
+0001,20300101,1200
+0002,20300101,140
+0003,20300101,2000
+0004,20300101,3000
+0005,20300101,9999
+
+--- 数据kh2.txt
+0001,20300101,100
+0006,20300102,140
+0007,20300102,2000
+0008,20300102,3000
+0009,20300102,9999
+
+--- 上传原文件到hdfs
+hadoop fs -put /opt/datas/kh.txt /datas/hive
+
+--- 字段说明
+no id
+opendate 开户日
+bal 开户金额
+
+-- 建表语句
+create external table if not exists mw.A_Q(
+no string,
+opendate string,
+bal string
+) partitioned by(day string)
+row format delimited fields terminated by ','
+location '/hive/ODS/A_Q';
+
+create external table if not exists mw.A_Z(
+no string,
+opendate string,
+bal string
+) partitioned by(day string)
+row format delimited fields terminated by ','
+location '/hive/ODS/A_Z';
+
+-- 加载数据
+load data inpath '/datas/hive/kh.txt' into table A_Q partition(bey='20300101');
+
+load data inpath '/datas/hive/kh.txt' into table A_Z partition(bey='20300102');
+
+-- 加工脚本
+use mw;
+insert overwrite table A_N_Q paritition(day='$(YYYYMMDD)')
+select
+no,opendate,bal,day
+from
+(
+    select
+    *,
+    row_number() over(partition by no order by day desc) r
+    from
+    (
+        select * from A_Q where day=from_unixtime(unix_timestamp('$(YYYYMMDD)','yyyyMMdd')-85400,'yyyyMMdd')
+        union all
+        select * from A_Z where day='$(YYYYMMDD)'
+    ) t1
+) t2 where t2.r = 1;
+
+-----------------------------------------------------------------
+
+use mw;
+insert overwrite table A_N_Q paritition(day='20300102')
+select
+no,opendate,bal,day
+from
+(
+    select
+    *,
+    row_number() over(partition by no order by day desc) r
+    from
+    (
+        select * from A_Q where day=from_unixtime(unix_timestamp('20300102','yyyyMMdd')-85400,'yyyyMMdd')
+        union all
+        select * from A_Z where day='20300102'
+    ) t1
+) t2 where t2.r = 1;
+
+-----------------------------------------------------------------
+-- 加工脚本2(不怎么使用)
+use mw;
+insert overwrite table A_N_Q paritition(day='$(YYYYMMDD)')
+select
+\`(r)?+.+\`
+from
+(
+    select
+    *,
+    row_number() over(partition by no order by day) r
+    from
+    (
+        select * from A_Q where day=concat('$(YYYY)','$(MM)','$(DD)'-1)
+        union all
+        select * from A_Z where day='$(YYYYMMDD)'
+    ) t1
+) t2 where t2.r = 1;
+'''
+
+#### hive的自定义函数
+UDF一进一出， 例如：unix_timestamp()
+UDTF多进一出，例如：sum()
+UDAF一进多出，例如：split()
+
+> 为什么要使用自定义函数，有的时候Hive的内置函数并不能满足我们业务的要求
+
+需要使用java编写：
+pom文件里添加 hadoop-client(2.6.5)、hadoop-hdfs(2.6.5)、hive-exec(1.2.1)
+新建一个HiveUDF的类，并继承UDF，并实现他的evaluate方法
+
+新建一个HiveUDAF的类，并继承UDAF，并实现他的init，iterate,terminatePartial,merge,terminate方法。iterate可以重载，主要负责接受数据
+
+新建一个ExplodeMap的类，并继承GenericUDTF,并实现其中的process、initialize、close方法。
+
+> iteratehive的其他方式：beeline -u jdbc:hive2://mingwang3:10000 -n root -hivevar YYYYMMDD='20300103'
+
+> 生成永久的自定义函数：create function mw_hello as 'com.mingwang.HiveUDF' using jar 'hdfs://mingwang1/hive/jar/udf_jar_1.jar';
+
+> 使用自定义函数：select mw_hello('world',12345);
+
+> 生成临时的自定义函数：create temporary function mw_hello as 'com.mingwang.HiveUDF' using jar 'hdfs://mingwang1/hive/jar/udf_jar_1.jar';
+
+#### Hive案例
+##### 天气
+数据如下：
+
+'''sql
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+2019-11-23 11:11:11 21c
+'''
+
+指标：
+
+'''sql
+表名：weather
+字段：最高温度，最高温度的日期
+批量：月
+'''
+
+分析：
+
+'''sql
+最高温度：select max(温度) from t_weather
+最高温度日期：select data from t_weather where 温度=max(温度)
+'''
+
+先找到源数据表（应为没有，所以创建，并且导入数据）
+
+'''sql
+create external table inner_ods_01_weather(
+wdate string,
+temp string
+)
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+location '/datas/hive/inner/DDS/weather';
+
+load data inpath '/datas/hive/weather.txt' into table inner_ods_01_weather;
+
+# sql
+select date_format(wdate,'yyyyMM'),max(temp) from weather group by date_format(wdate,'yyyyMM');
+
+# 每月最高温度的日期
+select
+    tw.wdate,
+    tw.temp
+from
+    weather tw,
+    (select
+        date_format(wdate,'yyyyMM')df,
+        max(temp) maxtemp
+    from weather t_weather
+    group by date_format(wdate,'yyyyMM')
+    ) tm
+where tw.temp=tw.maxtemp and date_format(tw.wdate,'yyyyMM')=df'
+
+# 统计直接好友，并用视图功能达到行转列的功能
+select name,fc from t_friend lateral view explode(friends) friendtable as fc;
+
+# 直接好友
+select concat(name,':',fc) from t_friend lateral view explode(friends) friendtable as fc;
+
+# 间接好友
+select
+    tj1.name,
+    tj1.fc,
+    tje.fc
+from
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj1,
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj2
+where tj1.name = tj2.name and tj1.fc <> tj2.fc;
+
+select
+    concat(tj1.fc,':',tj2.fc) cfc
+from
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj1,
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj2
+where tj1.name = tj2.name and tj1.fc <> tj2.fc;
+
+# 间接好友推荐度
+select
+    concat(tj1.fc,':',tj2.fc),
+    count(1)
+from
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj1,
+    (select name,fc from t_friend view explode(friends) friendtable as fc) tj2
+where tj1.name = tj2.name and tj1.fc <> tj2.fc
+group by concat(tj1.fc,':',tj2.fc);
+'''
+
+#### hive分桶表
+> 根据字段进行切割数据表，分桶是将数据集分解为更容易管理的若干部分的另一种技术。
+
+> 原理：是将字段值hash去模分布到不用的桶里。
+
+> 怎么取用：建表语句的时候指定那个字段作为分桶的依据，并且设置好数量。
+
+'''sql
+# 开启参数
+set hive.enforce.bucketing=true;
+set mapreduce.job.reduce=3;
+
+create external table if not exists salgrade_cluster (
+    grade int,
+    losal int,
+    hisal int
+) clustered by(losal) into 3 buckets
+row format delimited fields terminated by '\t'
+location '/data/DDS/salgrade_cluster';
+'''
+
+> 分桶的表无法用load语句
+
+通常我们会使用插入语句：
+
+'''sql
+insert overwrite table salgrade_cluster select * from salgrade cluster by (losal);
+
+-- 数据取样
+# 安照桶的个数取样
+select * from salgrade_cluster tablesample(bucket 2 out of 2 on losal);
+
+# 安照百分比进行取样
+select count(1) from salgrade_cluster tablesample(bucket 1 out of 2 on rand());
+
+'''
+
+## 数据倾斜
+
+### 引发数据倾斜的5种可能
+
+**大数据文件不可切分**
+
+map默认是128M进行切分，当碰到不可切分的大数据文件的时候可能会发生数据倾斜。
+
+解决方案： 将数据存储格式改为orc或者sqence等列式存储，或者bzip2等可分割的压缩算法。
+
+**多维表关联、数据膨胀**
+
+笛卡尔积
+
+'''sql
+select * from a
+    left join b on a.id=b.id=id
+    left join c on c.name=d.name
+    left joim d on d.no=c.no;
+'''
+
+解决方案：添加一张中间表
+
+**中间数据无法消除**
+
+**业务无关的数据引发的数据倾斜**
+
+一堆字段全是空值
+
+解决方案：将无用的字段加工处理掉
+
+**无法消解中间结果的数据量引发的数据倾斜**
+
+collect_list  聚合函数
+'''aql
+select s_age,collect_list(s_score) list_score from student_tb_txt group by s_age
+'''
+
+调整map的内存
+
+**两个Hive数据表连接时引发的数据**
+
+key分布不均
+
+开启map端聚合
+
+## Hive优化
+
+### 本地模式
+
+### 并行模式
+
+### 严格模式
+
+### JVM重用
+
+### 表的优化（小表与大表、大表与小表）
+
+### mapside聚合
+
+### count(Distinct)
+
+### 防止笛卡尔积
+
+### 行列过滤（列裁剪）
+
+### 运算符两边有一个为空，那么结果为空
+处理方案：select nvl(bal1,0) + nvl('',0) from sxt;
+
+nvl不识别空白
+
+解决方案：select nvl(bal1,0) + nvl(cast(bal2 as int),0) from sxt;
+
+## 尽量使用 orc 数据文件格式存储，为什么呢？
+
+1. ORC是列式存储，有多种文件压缩方式，并且有着很高的压缩比。
+2. 文件是可拆分（split）的，应为，在hive中使用ORC作为表的文件存储格式，不仅节省HDFS存储资源，查询任务的输入数据量减少，使用的maptask也就减少了。
+3. 提供了多种索引，row group index、bloom filter index。
+4. ORC可以支持复杂的数据结构（比如Map等）
