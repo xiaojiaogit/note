@@ -1,0 +1,639 @@
+数据库管理系统 DBMS
+数据库/仓库	       DB
+SQL		结构化查询语言
+
+SQL分类：
+	DQL语句 数据查询语言 select
+	DML语句 数据操作语言 insert delete update
+	DDL语句 数据库定义语言 create drop alter
+	TCL语句 事务控制语言 commit rollback
+
+
+查询薪水大于1800，并且部门编号为20或30的员工
+select deptno,ename,sal from emp where sal > 1800 and (deptno = 20 or deptno = 30);
++--------+--------+---------+
+| deptno | ename  | sal     |
++--------+--------+---------+
+|     30 | ALLEN  | 1600.00 |
+|     30 | WARD   | 1250.00 |
+|     20 | JONES  | 2975.00 |
+|     30 | MARTIN | 1250.00 |
+|     30 | BLAKE  | 2850.00 |
+|     20 | SCOTT  | 3000.00 |
+|     30 | TURNER | 1500.00 |
+|     30 | JAMES  |  950.00 |
+|     20 | FORD   | 3000.00 |
++--------+--------+---------+
+
+rand()  * 122
+0~1
+0	122
+
+匹配工作岗位，当为MANAGER时，薪水上调10%，当为SALESMAN时，薪水上调
+50%，其它岗位薪水不变
+select job,ename,
+		(case job 
+			when 'MANAGER' then sal*1.1
+			when 'SALESMAN' then sal*1.5
+			else sal
+			end) as newsal from emp;
+
+
+select ename,(sal+comm)*12 as yearsal from emp;
+
+去除部门编号deptno和工作岗位job重复的记录
+select distinct deptno,job from emp;
+
+select
+	job,max(sal) as maxsal
+from
+	emp
+group by
+	job
+order by
+	maxsal desc;
+
+
+select 
+	deptno,avg(sal) as avgsal
+from
+	emp
+group by
+	deptno;
+
+计算出不同部门不同岗位的最高薪水
+select 
+	deptno,job,max(sal) as maxsal
+from
+	emp
+group by
+	deptno,job;
+
+找出每个工作岗位的最高薪水，除MANAGER之外
+select * from emp where job <> 'MANAGER';
+
+select 
+	job,max(sal) as maxsal
+from
+	emp
+where
+	job <> 'MANAGER'
+group by
+	job;
+
+找出每个工作岗位的平均薪水，要求显示平均薪水大于2000的；
+
+select 
+	job,avg(sal) as avgsal
+from
+	emp
+group by
+	job
+having 
+	avgsal > 2000;
++-----------+-------------+
+| job       | avgsal      |
++-----------+-------------+
+| ANALYST   | 3000.000000 |
+| CLERK     | 1037.500000 |
+| MANAGER   | 2758.333333 |
+| PRESIDENT | 5000.000000 |
+| SALESMAN  | 1400.000000 |
++-----------+-------------+
+
+
+
+查询员工名称和部门名称
+ename -> emp
+dname -> dept
+
+select ename,dname from emp,dept;
+
+跨表查询
+	年代分类：
+		SQL92
+			select ename,dname from emp as e,dept as d where e.deptno = d.deptno;
+		SQL99(掌握)
+			select 
+				e.ename,d.dname
+			from
+				emp e
+			join
+				dept d
+			on
+				e.deptno = d.deptno
+			where 
+				数据过滤条件;
+	连接方式分类：
+		内连接：省略了一个关键字：inner
+			等值连接
+				查询出员工所对应的部门名称
+				select 
+					e.ename,d.dname
+				from
+					emp e
+				inner join
+					dept d
+				on
+					e.deptno = d.deptno
+			非等值连接
+				查询出员工薪水所对应的薪水等级:显示员工名称，薪水，薪水等级
+				select * from salgrade;
+				s
+				+-------+-------+-------+
+				| GRADE | LOSAL | HISAL |
+				+-------+-------+-------+
+				|     1 |   700 |  1200 |
+				|     2 |  1201 |  1400 |
+				|     3 |  1401 |  2000 |
+				|     4 |  2001 |  3000 |
+				|     5 |  3001 |  9999 |
+				+-------+-------+-------+
+				select ename,sal from emp;
+				e
+				+--------+---------+
+				| ename  | sal     |
+				+--------+---------+
+				| SMITH  |  800.00 |
+				| ALLEN  | 1600.00 |
+				| WARD   | 1250.00 |
+				| JONES  | 2975.00 |
+				| MARTIN | 1250.00 |
+				| BLAKE  | 2850.00 |
+				| CLARK  | 2450.00 |
+				| SCOTT  | 3000.00 |
+				| KING   | 5000.00 |
+				| TURNER | 1500.00 |
+				| ADAMS  | 1100.00 |
+				| JAMES  |  950.00 |
+				| FORD   | 3000.00 |
+				| MILLER | 1300.00 |
+				+--------+---------+
+				以上两张表的连接条件是：e.sal between s.losal and s.hisal
+				select 
+					e.ename,e.sal,s.grade
+				from
+					emp e
+				inner join
+					salgrade s
+				on
+					e.sal between s.losal and s.hisal;
+			自连接:把一张表看成两张表使用
+				查询出员工所对应的领导名称：显示员工名称和领导名称
+				以下查询结果是：员工所对应的领导编号
+				a(ename,mgr)
+				+--------+------+
+				| ename  | mgr  |
+				+--------+------+
+				| SMITH  | 7902 | FORD
+				| ALLEN  | 7698 | BLAKE
+				| WARD   | 7698 | BLAKE
+				| JONES  | 7839 | KING
+				| MARTIN | 7698 |
+				| BLAKE  | 7839 |
+				| CLARK  | 7839 |
+				| SCOTT  | 7566 |
+				| KING   | NULL |
+				| TURNER | 7698 |
+				| ADAMS  | 7788 |
+				| JAMES  | 7698 |
+				| FORD   | 7566 |
+				| MILLER | 7782 |
+				+--------+------+
+
+				查询出领导名称及领导编号
+				select empno,ename from emp;
+				b(empno,ename)
+				+-------+--------+
+				| empno | ename  |
+				+-------+--------+
+				|  7369 | SMITH  |
+				|  7499 | ALLEN  |
+				|  7521 | WARD   |
+				|  7566 | JONES  |
+				|  7654 | MARTIN |
+				|  7698 | BLAKE  |
+				|  7782 | CLARK  |
+				|  7788 | SCOTT  |
+				|  7839 | KING   |
+				|  7844 | TURNER |
+				|  7876 | ADAMS  |
+				|  7900 | JAMES  |
+				|  7902 | FORD   |
+				|  7934 | MILLER |
+				+-------+--------+
+
+				表的连接条件：a.mgr = b.empno
+				select 
+					a.ename,b.ename as leadername
+				from
+					emp a
+				join
+					emp b
+				on
+					a.mgr = b.empno;
+
+
+		外连接：省略了一个关键字：outer
+			右外连接/右连接
+			select 
+				e.ename,d.dname
+			from
+				emp e
+			right outer join
+				dept d
+			on
+				e.deptno = d.deptno;
+			左外连接/左连接
+				select 
+					a.ename,b.ename as leadername
+				from
+					emp a
+				left outer join
+					emp b
+				on
+					a.mgr = b.empno;
+
+				select 
+					a.ename,b.ename as leadername
+				from
+					emp b
+				right outer join
+					emp a
+				on
+					a.mgr = b.empno;
+		全连接
+
+查询出员工的部门名称，员工的领导名称和薪水等级
+emp dept salgrade
+select 
+	d.dname,
+	e.ename,
+	b.ename as leadername,
+	s.grade
+from
+	emp e
+join
+	dept d
+on
+	e.deptno = d.deptno
+join
+	emp b
+on
+	e.mgr = b.empno
+join
+	salgrade s
+on
+	e.sal between s.losal and s.hisal;
+			
+找出薪水比公司平均薪水高的员工，要求显示员工名和薪水
+select avg(sal) as avgsal from emp;
++-------------+
+| avgsal      |
++-------------+
+| 2073.214286 |
++-------------+
+
+select ename,sal from emp where sal > (select avg(sal) as avgsal from emp);
+
+
+找出每个部门的平均薪水，并且要求显示平均薪水的薪水等级
+第一步：先求出每个部门的平均薪水
+select 
+	e.deptno,avg(e.sal) as avgsal
+from
+	emp e
+group by 
+	e.deptno;
+将以上查询结果当成临时表t【deptno,avgsal】
++--------+-------------+
+| deptno | avgsal      |
++--------+-------------+
+|     10 | 2916.666667 | 4
+|     20 | 2175.000000 | 4
+|     30 | 1566.666667 | 3
++--------+-------------+
+salgrade  s
++-------+-------+-------+
+| GRADE | LOSAL | HISAL |
++-------+-------+-------+
+|     1 |   700 |  1200 |
+|     2 |  1201 |  1400 |
+|     3 |  1401 |  2000 |
+|     4 |  2001 |  3000 |
+|     5 |  3001 |  9999 |
++-------+-------+-------+
+
+t.avgsal between s.losal and s.hisal
+
+select 
+	t.avgsal,s.grade
+from
+	(select 
+			e.deptno,avg(e.sal) as avgsal
+		from
+			emp e
+		group by 
+			e.deptno) t
+join
+	salgrade s
+on
+	t.avgsal between s.losal and s.hisal;
+
+查询出工作岗位为manager和salesman的员工
+select ename,job from emp where job = 'MANAGER' or job = 'SALESMAN';
+select ename,job from emp where job in('MANAGER','SALESMAN');
+UNION 合并相加结果集
+select ename,job from emp where job = 'MANAGER'
+union
+select name,job from emp where job = 'SALESMAN';
+
+
+select ename,job from emp where job = 'MANAGER'
+union
+select empno,job from emp where job = 'SALESMAN';
+
+页码：pageNo	pageSize:3
+第1页：1，2，3	limit 0,3
+第2页：4,5,6	limit 3,3
+第3页：7，8，9	limit 6,3
+		limit (pageNo-1)*pageSize,pageSize
+第4页：10，11，12 limit 9,3
+
+DDL -> create 
+create table t_表名/tbl_表名(
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束
+);
+
+
+学号：no INT(4)
+姓名：name varchar(32)
+性别：sex char(1)
+出生日期：birth date
+邮箱：email varchar(128)
+
+create table t_student(
+	no int(4),
+	name varchar(32),
+	gender char(1),
+	birth date,
+	email varchar(128)
+);
+
+drop table t_student;
+drop table if exists t_student;
+
+复制表:create table 表名 as 查询语句
+create table emp_bak as select * from emp;
+
+
+
+DML语句：insert update delete
+insert语法： 
+insert into 表名(字段名,字段名,字段名,字段名) values(字段值,字段值,字段值,字段值);
+
+`
+insert into t_student(no,name,gender,birth,email) values(1,'zhangsan','1',str_to_date('1949-10-01','%Y-%m-%d'),'zhangsan@126.com');
+insert into t_student(no,name,gender,birth,email) values(2,'lisi','0','1949-11-11','lisi@126.com');
+insert into t_student(no,name,gender,birth,email) values(3,'hanmeimei','0',str_to_date('11-11-1950','%m-%d-%Y'),'hanmeimei@126.com');
+
+insert into t_student values(5,'jerry','1','1949-01-01','jerry@126.com');
+
+insert into t_student(no,name,gender) values(4,'lilei','1');
+
+跨表查询
+	迪卡尔积现象
+	年代分类：
+		SQL92:select xxx from 表名1,表名2 where 表的连接条件 and 数据过滤条件
+		SQL99：select 
+				xxx
+			from 
+				A表名
+			join
+				B表名
+			on
+				连接的条件
+			where
+				数据过滤条件;
+	查询方法分类：
+		内连接
+			等值连接
+			非等值连接
+			自连接
+		外连接
+			左外连接/左连接
+			右外连接/右连接
+		全连接
+			
+子查询：嵌套
+
+UNION:合并查询结果集
+	1.查询字段个数一致
+	2.字段类型要一致
+limit 数据下标,长度
+
+表：由行和列组成
+create table 表名(
+	字段名称 字段类型 字段长度 字段约束，
+	字段名称 字段类型 字段长度 字段约束，
+	字段名称 字段类型 字段长度 字段约束，
+	字段名称 字段类型 字段长度 字段约束
+);
+
+create table 表名 as 查询语句;
+
+DML -> insert
+insert into 表名(字段名称,字段名称,字段名称,字段名称) values(字段值,字段值,字段值,字段值);
+
+DML -> update
+update 语法： update 表名 set 字段名称 = 字段值,字段名称 = 字段值 where 限制条件;
+update t_student set birth = str_to_date('1951-10-10','%Y-%m-%d') where no = 4;
+update t_student set gender = 0 , email = 'lilei' where no = 4;
+update t_student set email = 'lilei@126.com';
+
+DML -> delete
+delete from t_student; //删除表中所有的数据
+delete from t_student where no = 4;
+
+
+
+drop table if exists t_student;
+create table t_student(
+	no int(4),
+	name varchar(32),
+	gender char(1) default '1',
+	birth date,
+	email varchar(128)
+);
+insert into t_student(no,name) values(1,'zhangsan');
+
+insert into t_student(no,name) values(2,'李四');
+
+
+跨表查询
+	迪卡尔积现象
+	根据年代分类：
+		SQL92:
+			select xxx from 表名1,表名2 where 表的连接条件 and 数据过滤条件;
+		SQL99:
+			select 
+				xxx
+			from
+				表名1
+			join
+				表名2
+			on
+				表1和表2的连接条件
+			join
+				表名3
+			on
+				表1和表3的连接条件
+			where
+				数据过滤条件;
+	根据连接方式分类：
+		内连接：inner
+			等值连接
+			非等值连接
+			自连接
+		外连接:outer
+			左外连接/左连接
+			右外连接/右连接
+		全连接：
+子查询：
+	select
+	where
+	from
+
+UNION合并查询结果集
+limit 起始下标,截取长度
+表：行和列
+create table t_表名(
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束,
+	字段名称 字段类型 字段长度 字段约束
+);
+
+drop table 表名;
+drop table if exists 表名;
+
+alter table 表名 add 
+alter table 表名 modify 字段名称 字段类型 字段长度 字段约束;
+alter table 表名 drop 字段名称;
+alter table 表名 change 原字段名 新字段名 
+
+DDL语句
+
+
+DML -> insert update delete
+insert into t_user(id,name) values(1,'zhangsan');
+
+update 表名 set 字段名称 = 字段值 , 字段名称 = 字段值 where 限制条件;
+
+delete from 表名 where 限制条件;
+
+
+t_student包含：sno,sname,classno,cname
+
+drop table if exists t_student;
+create table t_student(
+	id int(4) primary key auto_increment,
+	sno int(4),
+	sname varchar(32),
+	classno int(4),
+	cname varchar(32)
+);
+
+
+
+
+
+
+drop table if exists t_student;
+create table t_student(
+	sno int(4) primary key auto_increment,
+	sname varchar(32),
+	classno int(4)
+);
+drop table if exists t_class;
+create table t_class(
+	cno int(4) primary key,
+	cname varchar(32)
+);
+
+
+create table emp_bak3 as select * from emp;
+
+create view myview as select * from emp;
+create table emp_bak3 as select empno as a,ename as b from emp;
+
+create view myview2 as
+	select 
+		e.ename,d.dname
+	from
+		emp e
+	join
+		dept d
+	on
+		e.deptno = d.deptno;
+
+create table t_hansband(
+	hno int(4) primary key,
+	hname varchar(32),
+	wifeno int(4) unique,
+	foreign key(wifeno) references t_wife(wno)
+
+);
+hno	hname		wifeno -> unique
+--------------------------------
+100	zhangsan	1
+200	wangwu		
+
+create table t_wife(
+	wno int(4) primary key,
+	wname varchar(32)
+);
+wno	wname
+---------------------
+1	lisi
+
+
+
+
+
+create table t_hansband(
+	hno int(4) primary key,
+	hname varchar(32),
+
+);
+hno	hname	
+--------------------------
+100	zhangsan
+200	wangwu		
+
+create table t_wife(
+	wno int(4) primary key,
+	wname varchar(32)
+);
+wno	wname
+---------------------
+1	lisi
+
+create table t_couple(
+	hansbandno int(4),
+	wifeno	   int(4)
+);
+
+hansbandno	wifeno
+-------------------
+100		1
+200		1
+100		2
+
+
+
+
