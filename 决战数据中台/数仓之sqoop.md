@@ -9,9 +9,8 @@ export HIVE_CONF_DIR=/opt/hive/conf
 
 如果报zookeeper的错误把他们注释了就可以了
 
---------------------问题解决-----------------------
-将hive的lib里面的拷贝到sqoop的lib目录下
-cp hive-exec-1.2.1.jar /usr/local/sqoop-1.4.7.bin__hadoop-2.6.0/lib/
+--------------------测试连通性-----------------------
+sqoop list-tables -connect jdbc:mysql://mingwang-1:3306/gz --username root --password root
 
 --------------------问题解决-----------------------
 将hive的lib里面的拷贝到sqoop的lib目录下
