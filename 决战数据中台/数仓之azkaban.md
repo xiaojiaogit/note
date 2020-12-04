@@ -50,6 +50,30 @@ yum install -y gcc-c++ git
 cd azkaban-3.73.1/
 编译 第一次运行时，此过程时间会比较长 -x test 表示跳过测试
 ./gradlew build installDist -x test
+
+-------------官方编译
+# Build Azkaban
+./gradlew build
+
+# Clean the build
+./gradlew clean
+
+# Build and install distributions
+./gradlew installDist
+
+# Run tests
+./gradlew test
+
+# Build without running tests
+./gradlew build -x test
+--------
+
+---------
+-----------------------------如果报这个错，解决方法如下------------------------------
+FAILURE: Build failed with an exception.
+-------------------因为内存不足导致的
+./gradlew build --no-daemon
+----------------------------------------------------------
 4. 编译后的主要目录：
 目录	说明
 azkaban-common	常用工具类
@@ -80,14 +104,14 @@ ln -s azkaban-web-server-0.1.0-SNAPSHOT azkaban-web
 1、先生成时区的配置文件Asia/Shanghai，用交互命令 tzselect 即可
 2、考贝该时区文件，覆盖系统本地时区配置
 cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+Asia  china  baidujing time  1
+验证：date 看时区
 
 ## 创建SSL配置
 命令：keytool -keystore keystore -alias jetty -genkey -keyalg RSA
-Asia  china  baidujing time  1
 运行此命令后会提示输入当前生成keystor的密码及相应信息，输入的密码要记住
 密码 - - - - - - CN yes 
-验证：date 看时区
-
+将生成 keystore 拷贝到 /azkaban-web-server-3.73.1/ 的根目录下面
 
 ## 集群配置
 1. 配置 WebServer
@@ -226,6 +250,12 @@ bin/start-web.sh
 解决方式：登录azkaban使用的mysql数据库，查看executors表中是否存在active=1的executor，如果没有，修改active字段，而后再次启动即可
 update executors set active = 1 where id = 1;
 
+将azkaban.properties
+web.resource.dir=/usr/liuwunan/Azkaban/azkaban-web-server-3.73.1/web    修改为全路径即可，登录用户名密码，在
+/usr/liuwunan/Azkaban/azkaban-web-server-3.73.1/conf/azkaban-users.xml 配置文件中，可以自己填写
+
+## 后台启动方式
+nohup azkaban-web-start.sh 1>/home/hadoop/azwebstd.out 2>/home/hadoop/azweberr.out &
 
 ## 实战
 
