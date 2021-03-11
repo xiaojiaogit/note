@@ -1,0 +1,147 @@
+hive 宝典
+
+external  ----->  外部表删除表数据不会丢失
+
+overwrite
+
+stored as textfile;    ------ 文件格式
+stored as parquet;   ---> 一种经过压缩的文件格式 √
+          sequence file
+		  orc file
+
+------> 可以在最前面定义，a为表名
+with a as
+(
+select
+* 
+from xxx_xxxx
+where dt='xxx' and (nihao='xxxxxxx' or nihao='yyyyyyy')
+)
+..............> 像这样的语句块可以写多个，例如：
+with tmp1 as(
+	select *****
+),
+tmp2 as (
+	select * *******
+)
+select
+tmp1.xxx
+tmp2.yyy
+from tmp1 join tmp2 on tmp.xxx=tmp2.xxx;
+
+insert into table dwd_weblog_xx partition(dt='2021-03-03')  -----> 插入查询数据
+create external table dwd_样例(
+xxx String,
+yyyy String
+)
+comment '描述信息'
+partitioned by (dt string)      ----> 分区
+row format delimited fields terminated by ','     ----> 分隔符
+stored as parquet;   ---> 一种经过压缩的文件格式
+
+load data inpath '/flume/2021/03/03' into table etl.ods_weblog partition(dt='2021-03-03');
+
+hive对与时间处理的函数：
+select unix_timestamp('2021-03-03 08:26:30');  --> 1614731190 日期字符串转时间戳
+select from_unixtime(1614731190);              --> 2021-03-03 08:26:30 时间戳转字符串
+select from_unixtime(1552961157,"yyyy-MM-dd HH:mm:ss")
+
+select from_unixtime(cast(1553184000488/1000 as int),'yyyy-MM-dd HH:mm:ss')   --2019-03-22 00:00:00
+
+16/Mar/2017:12:25:01 +0800 转成正常格式（yyyy-MM-dd hh:mm:ss）
+select from_unixtime(to_unix_timestamp('16/Mar/2017:12:25:01 +0800', 'dd/MMM/yyy:HH:mm:ss Z'))
+
+
+hive对于网址的处理：
+reverse(split(reverse(TXTMD),'\\\\')[0])  --->字符串反转后取最后
+regexp_extract(字符串，正则表达式，输出索引)
+select regexp_extract('http://www.baidu.com/mingwang/niubi123','http://www.biadu.com/(.*?)/(.*?)',1);
+
+parse_url
+select parse_url(case when url like 'http://%' or url like 'https://%' then url else concat('http://',url) end,'HOST') as url_host from 数据库.表A
+
+
+select parse_url('http://facebook.com/path/p1.php?query=1', 'PROTOCOL') from dual;   --http
+select parse_url('http://facebook.com/path/p1.php?query=1', 'HOST') from dual;---facebook.com​
+select parse_url('http://facebook.com/path/p1.php?query=1', 'REF') from dual;---空​
+select parse_url('http://facebook.com/path/p1.php?query=1', 'PATH') from dual;---/path/p1.php​
+select parse_url('http://facebook.com/path/p1.php?query=1', 'QUERY') from dual;---query=1
+
+parse_url(url,'QUERY','bbb')
+select parse_url('http://facebook.com/path/p1.php?query=1&query=1', 'QUERY',query) from dual;---query=1
+
+hive 中拆分字符串：
+select split('faffaf','a')[0]
+截取字符串
+select substr('HelloWorld',5,3) value from dual; //返回结果：oWo
+
+url解码的自定义函数：
+ public static void main(String ars[]) throws Unsupporred的异常 {
+	String decode = URLDecoder.decode("234252242424FHDD3423FFHFH424234%7C0","utf-8");
+	System.out.println(decode);
+ }
+------> 调用上面方法java方法的函数：
+reflect('java.net.URLDecode','decode',要解码的字段,'utf-8') as XXX,
+
+join xxx_xxx on a.event['pgid'] = b.pgid
+
+where dt='xxxxxx' and yyyyy not in ('aaa','bbb','ccc')
+
+nohup hiveserver2 1>/dev/null 2>&1 &     ------> 后台运行hiveserver
+
+netstat -nltp | grep 10000     ----> 查看端口
+
+beeline -u jdbc:hive2://localhost:10000 -n root     ----> 登录hive的客户端
+
+set mapreduce.framework.name=local;       -----------------> 打开这这个hive的任务会跑的快一点
+
+count(if(xxx>=3,"ok",null))/count(1) as ‘回头客占比’
+
+根据正则表达式拆分
+row format serde 'org.apache.hadoop.hive.serde2.RegexSerDe'
+with serdwproperties ( 
+	"input.regex" = "([^ ]*) ([^ ]*) ([^ ]*) \[([^ ]* -[^ ]*)\] "([^ ]*) /([^ ]*)?domain=([^ ]*)&url=([^ ]*)/&title=([^ ]*)&referrer=&sh=([^ ]*)&sw=([^ ]*)&cd=([^ ]*)&lang=([^ ]*) ([^ ]*)" ([^ ]*) ([^ ]*) "([^ ]*)" "(.+)" "([^ ]*)"" \
+)
+
+创表之前可以在创表语句前，加上这么一句话：
+drop table if exists 表面    --> 如果表存在就先删除然后执行创表语句。
+
+强行删除数据库：
+drop database etl cascade;
+
+如果在查询的时候有的字段不想要可以用NULL替换。
+
+立维度表的函数：
+在使用函数进行各种维度的计算时可以使用 with cube 这个函数进行处理，他会对分组的每个字段进行一 一匹配他们的各种组合，案例如下：
+select
+aaa,
+bbb,
+ccc,
+ddd,
+eee
+from xxx
+group by aaa,bbb,ccc,ddd,eee
+with cube
+;
+-------------> 使用的时候有 distinct 可以使用下面的参数设置，往大调以下即可（大于组合的情况数即可）：
+set hive.new.job.grouping.set.cardinality=1024;
+
+-------------> 返回两个参数不为null的一个，nvl只能写两个值，示例如下：
+nvl(p1,p2)
+where nvl(p1,p2) is not null;
+-------------> 返回参数中第一个不为null的值，coalesce可以写多个值，示例如下：
+coalesce(p1,p2,p3,...)
+where coalesce(p1,p2,p3,...) is null;
+
+
+
+
+
+
+
+
+
+
+
+
+

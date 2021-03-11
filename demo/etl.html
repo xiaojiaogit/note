@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>K18网站流量统计</title>
+        <script src="js/echarts.min.js"></script>
+        <script src="js/mytheme.js"></script>
+		<script src="js/jquery-3.5.1.js"></script>
+    </head>
+    <body>
+
+        <div style="width: 100%;height: 650px; ">    
+        </div>
+        
+        <script type="text/javascript">
+		
+			// 定时调用clock方法
+			var int=self.setInterval("clock()",1000);
+			function clock()
+			{
+				var mChatrs = echarts.init(document.querySelector("div"),"mytheme")
+           
+			   var option = {
+
+					// 标题
+					title: {
+						text: '网站人数访问',
+						textStyle: {
+							color: 'white'
+						},
+						left: 500,
+						top:10,
+					},
+					//提示，鼠标事件
+					tooltip: {
+						//tirgger: 'item',
+						trigger: 'axis',
+						//triggerOn: 'click'
+						//formatter: '{b} 量为：{c}'
+						//formatter: function (arg) {
+						//	return arg[0].name + ' 量为：' + arg[0].data
+						//}
+					},
+					toolbox: {
+						feature: {
+							saveAsImage:{}, //导出图片
+							dataView: {}, //数据视图
+							restore: {}, //重置
+							dataZoom: {}, //区域缩放
+							magicType: {
+								type: ['bar', 'line']
+							} //动态图标类型的切换
+						}
+					},
+					//图例
+					legend: {
+						data: ['year','month','day'],
+						//left: 200,
+						right: 20,
+						top: 37
+
+					},
+					xAxis: {
+						type: 'category',
+						data: ['pv','uv','ip'],
+						axisLabel: {
+								interval: 0,
+								rotate: 38
+							},
+					},
+					yAxis: {
+						type: 'value',
+						//设置坐标名称
+						name: '浏览量'
+					},
+					series: [
+						{
+							name: 'year',
+							type: 'bar',
+							data: [],
+							
+							// 柱的宽度
+							barWidth: '15%',
+							//设置柱状图渐变色
+							itemStyle: {
+								color: {
+									type: 'linear',
+									x: 0,
+									y: 0,
+									x2: 0,
+									y2: 1,
+									colorStops: [{
+										offset:0,color: '#00FFFF'
+									},{
+										offset:1,color: 'blue'
+									}],
+									global: false
+								}
+							}
+						},{     // 区分
+							name: 'month',
+							type: 'bar',
+							data: [],
+							// 柱的宽度
+							barWidth: '15%'
+					
+						},{
+							name: 'day',
+							type: 'bar',
+							data: [],
+							// 柱的宽度
+							barWidth: '15%'
+					
+						}
+					]
+				};
+				
+				$(function(){	
+					
+					//整理表单中的数据
+					var params = {
+						pvs: "pv",
+						rm: 5
+					};
+				
+					//发送agax请求，向后台查询pv数据
+					$.ajax({
+						type: 'POST',
+						url: 'http://h1:8080/etl',
+						data: JSON.stringify(params),
+						dataType: "json",
+						contentType: "application/json",
+						success: function(res) {
+							//option.xAxis.data = res.pvsList;
+							option.series[0].data = res.years;
+							option.series[1].data = res.months;
+							option.series[2].data = res.days;
+							//使用刚指定的配置项和数据显示图表。
+							mChatrs.setOption(option)
+						}
+					});
+				})
+			}
+            
+        </script>
+		<!--关闭定时器-->
+		<button onclick="int=window.clearInterval(int)">停止</button>
+		<button onclick="clock()">刷新</button>
+    </body>
+</html>

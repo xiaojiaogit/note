@@ -1,0 +1,53 @@
+1.下载presto安装包
+https://prestodb.io/docs/current/installation/deployment.html
+presto-server-0.215.tar.gz
+#上传到192.168.6.12  /opt/presto目录下
+scp presto-server-0.215.tar.gz root@192.168.6.12:/opt/presto
+3.解压
+cd   /opt/presto
+tar xvf presto-server-0.215.tar.gz
+4、修改配置文件
+cd presto-server-0.215
+mkdir  etc/
+ 
+vi etc/node.propertie
+内容如下：
+node.environment=production
+node.id=ffffffff-ffff-ffff-ffff-ffffffffffff
+node.data-dir=/var/presto/data
+ 
+vi etc/jvm.config
+内容如下：
+-server
+-Xmx16G
+-XX:+UseG1GC
+-XX:G1HeapRegionSize=32M
+-XX:+UseGCOverheadLimit
+-XX:+ExplicitGCInvokesConcurrent
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:+ExitOnOutOfMemoryError
+-Xbootclasspath/p:/opt/alluxio-1.8.1/conf
+ 
+vi etc/config.properties
+内容如下：
+coordinator=true
+node-scheduler.include-coordinator=true
+http-server.http.port=8080
+query.max-memory=5GB
+query.max-memory-per-node=1GB
+query.max-total-memory-per-node=2GB
+discovery-server.enabled=true
+discovery.uri=http://192.168.6.12:8080
+ 
+vi etc/log.properties
+内容如下：
+com.facebook.presto=INFO
+ 
+mkdir etc/catalog
+vi etc/catalog/jmx.properties
+内容如下：
+connector.name=jmx
+4.启动服务
+bin/launcher start
+访问地址
+http://192.168.6.12:8080/ui/
