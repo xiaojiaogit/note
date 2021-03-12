@@ -81,3 +81,6 @@ sqoop export \
 --update-mode allowinsert \
 --update-key id \
 --batch
+
+
+/opt/sqoop/bin/sqoop export --connect jdbc:mysql://h1:3306/springboot?characterEncoding=UTF-8 --username root --password root --table dwd_weblog_result --export-dir '/hive/warehouse/etl.db/dwd_weblog_result' --fields-terminated-by '\t' --update-mode updateonly --update-key time_frame --batch
