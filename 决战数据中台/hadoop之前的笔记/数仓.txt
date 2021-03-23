@@ -1,0 +1,1396 @@
+###公式
+两个人面试，一个人大约40分钟左右。
+1. 自我介绍？
+2. 你是怎么接触的大数据？
+3. 你们的数仓模型是什么样的？
+4. 星型模式、雪花模型、星座模型各有什么好处？
+5. 数仓分层架构的设计及每一层干什么的？
+6. 你们数仓中拉链表怎么设置的？
+7. 你们拉链表有分区吗？拉链表分区是怎么控制的？（我说的是每天全量刷新，他接着问如果你们数据量特别大呢？怎么解决的？）
+8. 事实表有哪些？事实表中的历史数据怎么修改？（这个没答上来，面试官说你们没有做过快照表吗？这个没听说过）
+9. 你们工作中实际的工作流程是怎么样的？
+10. 如果给你提一个需求，需要将ods、dwd、dws层数据全部都要用到，并且需要全部都要重新再做一遍，然后为了生成这个ads层数据的结果，你是怎么避免这种yanzuo式开发的？（这个我没太懂意思，然后说的没遇到过）
+11. 你们元数据管理怎么做的？
+12. 你们数仓部门几个人？
+13. 你们集群是什么规模？每台服务器什么配置？
+14. 数仓中用的存储格式是什么？ORC和Parquet一般是什么场景下用？
+15. Hive中的UDF和UDTF？
+16. 开窗函数的介绍？排序的函数？
+17. Sort by和Order by的区别？
+18. 行转列和列转行用的哪些函数？
+19. Hive中Join的工作原理？
+20. mapJoin的工作原理？
+21. 你们工作中Azkaban怎么实现的跨工作流？比如说ads层的一个指标需要依赖于一个宽表，肯定不在一个工作流中，你们是怎么处理这种情况的？
+22. 工作中如果做一个指标需要依赖于别人开发设计好的一张宽表，这种场景你们是怎么处理的？
+23. 你为什么要离职？
+24. 你是主动提出离职的还是公司不给你续签合同了？
+25. 你们公司在哪个地方？
+26. 你住在哪个地方？去公司要多久时间？
+27. 数仓怎么搭建起来的？
+28. 你们数仓怎么建模型的？怎么分层的？
+29. 如果要让你设计一个模型的话，你会怎么设计？（可以随便举个例子来说）
+30. 指标分析你们主要是用的什么？
+31. 谈谈你对Hive的优化以及写SQL过程中的优化？
+32. Select * 与Select 写全部列名 这两个有什么区别吗？
+33. 一个SQL题：如何去求这一天24小时每隔5分钟的股票的一个峰值和低估值？（不是实时的，数据可以是昨天一天的数据）
+34. 你有什么问我的吗？
+
+###面试2
+1）一面
+（1）自我介绍
+（2）介绍你们数据采集到落地流程
+（3）我在描述过程中说到了选型用的kafka，问我kafka为什么选型时候采用它
+（4）偏向于离线还是实时，然后做的哪一块
+（5）spark任务提交流程
+（6）sparkSQL执行过程，sparkcore，spark优化
+（7）开发中sparkStreaming具体使用
+（8）你们hive建模是否参与，对数仓建模是否了解
+（9）开窗函数，列转行，行转列
+（10）去重用什么，不能说distinct
+（11）现场SQL题2道，也还好，忘记了
+（12）离职原因（顺序可能不在这个位置）
+（13）你还有想问的吗
+
+2）哗啦啦（数仓）：二面（一个小时）
+（1）自我介绍
+（2）介绍你们数据采集到落地流程
+（3）spark实时问了好多，不过都和面试宝典类似，我都扯到面试宝典了
+（4）想做平台还是离线还是实时（他们的实时是flink）
+（5）数仓建模是否参与
+（6）数仓每一层怎么建模
+（7）工作中用到什么函数？还是想让说行转列、列转行
+（8）你的离职原因
+（9）是不是老板找你谈话，是你主动离职吗
+（10）拉链表做过吗？我说没有，她说你现场给个思路（我做过啊，我就开始说了）
+（11）拉链表数据特别大是不是需要全量刷写
+（12）SQL题，话务员打电话，有id和时长，统计30分钟以上话务员通话时长及话务员数量（具体记不清楚，回答后说我好像没理解啥意思）
+（13）你有什么要问的吗
+
+数仓--Hive-面试之Hive与HBase的区别
+需要从组件作用、架构设计多个方面进行学习，理论指导实践
+从使用方面讲
+Hive是一个构建在Hadoop平台上的数据仓库，可以将结构化的数据文件映射为一张数据库表。通过Hive可以使用HQL语言查询存放在HDFS上的数据。HQL是一种类SQL语言，这种语言最终被转化成Map/Reduce。
+HBase 是基于HDFS平台的Key/Value类型的NoSql数据库，是一个分布式、可扩展、存储海量数据的数据库，并且对与null值保存不占用空间。HBase能够在数据库上实时运行，而不是运行MapReduce任务。HBase被分区成表，表格又进一步分割成列族。列族必须使用Schema定义，列族将某一类型的列集合起来。例如："message"列族可能包含"to"、"from" 、"date" 、"body"等列。HBase中每一个Key/Value被定义为一个cell，一个完整的cell由rowkey、列族、列、时间戳组成。在HBase中，行是Key/Value映射的集合，整个映射通过rowkey来唯一标识。HBase利用Hadoop的基础设施，可以进行水平扩展。
+两者的特点
+Hive帮助熟悉SQL的人运行MapReduce任务。运行Hive查询会花费较长时间，因为Hive的默认计算引擎是Hadoop的MapReduce。当然Hive也可以将底层计算引擎更换为Spark/Tez等。
+HBase通过存储Key/Value类型数据来工作。它支持四种主要的操作：增加或者更新行、查看一个范围内的cell、获取指定的行、删除指定的行、列或者列的版本。HBase数据的版本信息主要用来获取历史数据，每一行的历史数据可以被删除，然后通过HBase 的Compactions可以释放空间。虽然HBase包括表格，但是schema仅仅被表格和列族所要求，列不需要schema。HBase的表包括增加和计数功能。
+限制
+Hive目前仅支持ORCFile文件格式的数据更新操作（前提是需要开启事务支持），Hive必须提供预先定义好的schema，将文件映射成表。
+HBase的SQL查询功能可以通过 Apache Phonenix实现，需要提供表的schema。HBase的运行需要zookeeper的支持，zookeeper用来分布式协调服务（配置服务、维护元信息、命名空间服务）
+应用场景
+Hive主要用户构建基于Hadoop平台的数据仓库，处理大数据量的离线处理工作；
+HBase适合用来大数据的实时查询、海量数据的存储、离散型数据的存储；
+总结
+Hive和Hbase是两种基于Hadoop的不同技术–Hive是一种类SQL的引擎，并且运行MapReduce任务，HBase是一种在Hadoop之上的NoSQL 的Key/value数据库。当然，这两种工具是可以同时使用的。Hive可以用来进行统计查询，HBase可以用来进行实时查询，数据也可以从Hive写到Hbase，设置再从Hbase写回Hive。
+
+数仓--Hive-面试之Hive架构原理
+基础性的东西，不过在回答的时候要能回答出彩来
+
+什么是Hive
+Hive是由Facebook开源用于解决海量结构化日志的数据统计；Hive是基于Hadoop的一个数据仓库工具，可以将结构化的数据文件映射 成一张表，并提供类SQL查询功能，底层计算引擎默认为Hadoop的MapReduce（本质是将sql转化成mapreduce程序），可以将引擎更换为Spark/Tez；
+Hive架构
+Hive架构.PNG
+如图中所示，Hive通过给用户提供的一系列交互接口，接收到用户的指令(SQL)，使用自己的Driver，结合元数据(MetaStore)，将这些指令翻译成MapReduce，提交到Hadoop中执行，最后，将执行返回的结果输出到用户交互接口。
+1）用户接口：Client
+CLI（hive shell）、JDBC/ODBC(java访问hive)、WEBUI（浏览器访问hive）
+2）元数据：Metastore
+元数据包括：表名、表所属的数据库（默认是default）、表的拥有者、列/分区字段、表的类型（是否是外部表）、表的数据所在目录等；
+默认存储在自带的derby数据库中，推荐使用MySQL存储Metastore
+推荐学习博客 数仓--Hive--元数据表结构学习
+3）Hadoop
+使用HDFS进行存储，使用MapReduce进行计算。
+4）驱动器：Driver
+（1）解析器（SQL Parser）：将SQL字符串转换成抽象语法树AST，这一步一般都用第三方工具库完成，比如antlr；对AST进行语法分析，比如表是否存在、字段是否存在、SQL语义是否有误。
+（2）编译器（Physical Plan）：将AST编译生成逻辑执行计划。
+（3）优化器（Query Optimizer）：对逻辑执行计划进行优化。
+（4）执行器（Execution）：把逻辑执行计划转换成可以运行的物理计划。对于Hive来说，就是MR/Spark。
+Hive优点
+操作接口采用类SQL语法，提供快速开发的能力(简单、容易上手)；
+避免了去写MapReduce，减少开发人员的学习成本；
+统一的元数据管理，可与impala/spark等共享元数据；
+易扩展(HDFS+MapReduce：可以扩展集群规模；支持自定义函数)；
+Hive使用场景
+数据的离线处理；比如：日志分析，海量结构化数据离线分析…
+Hive的执行延迟比较高，因此hive常用于数据分析的，对实时性要求不高的场合；
+Hive优势在于处理大数据，对于处理小数据没有优势，因为Hive的执行延迟比较高。
+Hive的执行流程
+HiveQL通过CLI/web UI或者thrift 、 odbc 或 jdbc接口的外部接口提交，经过complier编译器，运用Metastore中的元数据进行类型检测和语法分析，生成一个逻辑方案(logical plan),然后通过简单的优化处理，产生一个以有向无环图DAG数据结构形式展现的map-reduce任务。
+SQL转化成MapReduce过程
+Hive是如何将SQL转化为MapReduce任务的，整个编译过程分为六个阶段：
+1-Antlr定义SQL的语法规则，完成SQL词法，语法解析，将SQL转化为抽象语法树AST Tree；
+2-遍历AST Tree，抽象出查询的基本组成单元QueryBlock；
+3-遍历QueryBlock，翻译为执行操作树OperatorTree；
+4-逻辑层优化器进行OperatorTree变换，合并不必要的ReduceSinkOperator，减少shuffle数据量；
+5-遍历OperatorTree，翻译为MapReduce任务；
+6-物理层优化器进行MapReduce任务的变换，生成最终的执行计划。
+
+
+数仓--Hive-面试之Hive的数据模型及各模块的应用场景
+这个讲起来搞不好让手写代码，扩展延申的问
+
+Hive的数据模型
+Hive数据模型.png
+数据模型组成及应用场景
+Hive的数据模型主要有：database、table、partition、bucket四部分；
+数据模型之database
+database：相当于关系型数据库中的命名空间，作用是将数据库应用隔离到不同的数据库模式中，hive提供了create database dbname、use dbname 以及drop database dbname的语句；
+数据模型之table
+table：表是由存储的数据以及描述表的一些元数据组成。数据存储再分布式文件系统中，元数据存储在关系型数据库中；
+hive表分四种：
+MANGED_TABLE :内部表
+EXTERNAL_TABLE：外部表
+INDEX_TABLE：索引表
+VIRTUAL_VIEW ：视图表
+查看表的具体信息使用：desc tablename或者 desc formatted tablename
+Hive内部表和外部表的区别
+数据模型之partition
+hive的分区是根据某列的值进行粗略的划分，每个分区对应HDFS上的一个目录；
+数据模型之bucket
+要使用hive的分桶功能，首先需要打开hive对痛的控制 set hive.enforce.bucketing=true;
+bucket是按照指定值进行hash，每个桶就是表目录里的一个文件
+
+
+
+数仓--Hive-面试之Hive支持的文件格式和压缩格式及各自特点
+Hive中的文件格式
+1-TEXTFILE
+文本格式，Hive的默认格式，数据不压缩，磁盘开销大、数据解析开销大。
+对应的hive API为：org.apache.hadoop.mapred.TextInputFormat和org.apache.hive.ql.io.HiveIgnoreKeyTextOutputFormat；
+可结合Gzip、Bzip2使用(系统自动检查，执行查询时自动解压)，但是使用这种方式，hive不会对数据进行切分，从而无法对数据进行并行操作
+2-SequenceFile
+Hadoop提供的二进制文件，Hadoop支持的标准文件；
+数据直接序列化到文件中，SequenceFile文件不能直接查看，可以通过Hadoop fs -text查看；
+SequenceFile具有使用方便、可分割、可压缩、可进行切片，压缩支持NONE、RECORD、BLOCK（优先）；
+对应hive API：org.apache.hadoop.mapred.SequenceFileInputFormat和org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+3-RCFILE
+rcfile是一种行列存储相结合的存储方式，先将数据按行进行分块再按列式存储，保证同一条记录在一个块上，避免读取多个块，有利于数据压缩和快速进行列存储；
+对应 hive API为：org.apache.hadoop.hive.ql.io.RCFileInputFormat和org.apache.hadoop.hive.ql.io.RCFileOutputFormat
+4-orcfile
+orcfile式对rcfile的优化，可以提高hive的读写、数据处理性能、提供更高的压缩效率；
+优点：
+每个task只输出单个文件，减少namenode负载；
+支持各种复杂的数据类型，比如：datetime，decima以及复杂类型struct、list、map；
+文件中存储了一些轻量级的索引数据；
+基于数据类型的块模式压缩：integer类型的列用行程长度编码，string类型的列使用字典编码；
+用多个相互独立的recordReaders并行读相同的文件
+无需扫描markers即可分割文件
+绑定读写所需内存
+metadata存储用protocol buffers，支持添加和删除列
+5-parquet
+Parquet也是一种列式存储，同时具有很好的压缩性能；同时可以减少大量的表扫描和反序列化的时间。
+总结
+textfile 存储空间消耗比较大，并且压缩的text 无法分割和合并 查询的效率最低,可以直接存储，加载数据的速度最高；
+sequencefile 存储空间消耗最大,压缩的文件可以分割和合并 查询效率高，需要通过text文件转化来加载；
+orcfile, rcfile存储空间最小，查询的效率最高 ，需要通过text文件转化来加载，加载的速度最低；
+parquet格式是列式存储，有很好的压缩性能和表扫描功能；
+SequenceFile,ORCFile(ORC)，rcfile格式的表不能直接从本地文件导入数据，数据要先导入到textfile格式的表中，然后再从textfile表中导入到SequenceFile,ORCFile(ORC)，rcfile表中。
+
+Hive支持的压缩格式
+Hive支持的压缩格式为Gzip、Bzip2、lzo、snappy
+
+
+
+数仓--Hive-面试之Hive内外表的区分方法及内外部差异
+Hive内外部区分方法
+查看hive元数据：进入mysql中hive元数据库，查看TBLS表，查看对应的表名和表类型；
+在hive-cli界面：desc extended tablename，查看TableType，一般在展示结果的最后显示；
+在hive-cli界面：desc formatted tablename，一个格式化的信息，查看TableType；
+Hive内外表特点
+内部表：
+hive创建表的时候默认是MANAGED_TABLE:内部表
+hive创建表的时候如果指定location，当进行load操作的时候，hdfs上的原始数据会迁移到location指定的目录下；如果创建表的时候没有指定location，数据会迁移到hive-site.xml中配置好的数据存储路径；
+hive内部表删除表的时候会将hdfs目录的数据和元数据信息全部删除；
+外部表：
+创建外部表的时候需要指定location的位置；
+hive删除表的时候只会讲元数据信息删除，并不会删除HDFS上的数据；
+生成环境中，建议使用hive外部表；
+
+
+数仓--Hive-面试之Hive视图如何创建、特点及应用场景
+Hive视图特点
+View是逻辑存在，Hive暂不支持物化视图(1.0.3)
+View只读，不支持LOAD/INSERT/ALTER。需要改变View定义，可以是用Alter View
+View内可能包含ORDER BY/LIMIT语句，假如一个针对view的查询也包含这些语句， 则view中的语句优先级高。例如，定义view数据为limit 10， 针对view的查询limit 20，则最多返回10条数据。
+Hive支持迭代视图。
+5.Hive中视图的查询和普通查询类似，查询时把表名更换为视图名即可。
+
+Hive视图创建
+视图view和table一样，可以指定database；
+创建视图
+CREATE VIEW [IF NOT EXISTS] view_name [(column_name [COMMENT column_comment], ...) ]  
+[COMMENT view_comment]  
+[TBLPROPERTIES (property_name = property_value, ...)]  
+AS SELECT ... 
+删除视图
+DROP VIEW [IF EXISTS] view_name 
+修改视图
+ALTER VIEW view_name SET TBLPROPERTIES table_properties  
+table_properties:  
+  : (property_name = property_value, property_name = property_value, ...) 
+Hive视图应用场景
+数据仓库中维度角色扮演和维度子维度时可以采用视图的方式保证维度的一致性；
+当Hive中的查询变得很长或复杂时，通过视图将这个查询语句分割成多个小的、更可控的片段可以降低这种复杂度；
+Hive中需要通过视图限制基于条件过滤的数据时；
+
+
+数仓--Hive-面试之Hive常用命令及作用
+这个问题猛的抛出来，挺容易懵的！
+
+1-创建表
+-- 内部表
+create table aa(col1 string,col2 int) partitioned by(statdate int) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'；
+-- 外部表
+create external table bb(col1 string, col2 int) partitioned by(statdate int) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' location '/user/gaofei.lu/';
+2-查看创建表语句
+show create table tablename;
+3-导入表数据
+本地数据：load data local inpath ' /home/gaofei.lu/aa.txt' into table aa partition(statdate=20170403)
+hdfs上数据：load data inpath '/user/gaofei.lu/aa.txt' into table bb partition(statdate=20170403)
+4-修改表属性
+alter table aa set tblproperties ('EXTERNAL'='TRUE')
+alter table bb set tblproperties ('EXTERNAL'='FALSE')
+5-修改列
+修改列名和列数据类型：alter table aa change col2 name string ;
+修改位置放置第一位：alter table aa change col2 name string first;
+修改位置指定某一列后面：alter table aa change col1 dept string after name;
+6-添加列(慎用)
+alter table aa add columns(col3 string);
+7-表重命名
+alter table aa rename to aa_test;
+8-添加分区
+alter table aa add partition(statdate=20170404);
+alter table bb add partition(statdate=20170404) location '/user/gaofei.lu/20170404.txt';
+9-查看表分区
+show partitioins aa;
+10-修改分区
+alter table aa partition(statdate=20170404) rename to partition(statdate=20170405);
+alter table bb partition(statdate=20170404) set location '/user/gaofei.lu/aa.txt';
+11-删除分区
+alter table aa drop if exists partition(statdate=20170404);
+12- beeline连接
+beeline  !connect jdbc:hive2://192.168.1.17:10000
+13- 设置hive on spark
+set hive.execution.engine=spark
+14-终止任务
+yarn application -kill job_id
+15-指定分隔符导出文件
+insert overwrite local directory '/home/hadoop/gaofeilu/test_delimited.txt'
+row format delimited
+fields terminated by '\t'
+select * from test;
+
+
+数仓--Hive-面试之Hive常用的10个系统函数及作用
+这个也是需要记忆的，工作中经常使用的函数，谨防被问懵了
+
+聚合函数
+函数处理的数据粒度为多条记录。
+sum()—求和
+count()—求数据量
+avg()—求平均直
+distinct—求不同值数
+min—求最小值
+max—求最人值
+
+分析函数 Analytics functions
+RANK
+ROW_NUMBER
+DENSE_RANK
+CUME_DIST
+PERCENT_RANK
+
+字符串连接函数
+concat
+concat_ws
+collect_list
+collect_set
+
+其他函数
+cast -类型转换
+if判断 -- if(con,'','');
+
+
+
+
+数仓--Hive-面试之简述UDF/UDAF/UDTF是什么，各自解决问题及应用场景
+UDF会经常写，UDAF不经常写，但是会经常被面试问到
+
+UDF
+User-Defined-Function 自定义函数 、一进一出；
+
+背景
+
+系统内置函数无法解决实际的业务问题，需要开发者自己编写函数实现自身的业务实现诉求。
+应用场景非常多，面临的业务不同导致个性化实现很多，故udf很需要。
+意义
+
+函数扩展得到解决，极大丰富了可定制化的业务需求。
+IO要求-要解决的问题
+in:out=1:1,只能输入一条记录当中的数据，同时返回一条处理结果。
+属于最常见的自定义函数，像cos,sin,substring,indexof等均是如此要求
+实现步骤(Java创建自定义UDF类)
+
+自定义一个java类
+继承UDF类
+重写evaluate方法
+打包类所在项目成一个all-in-one的jar包并上传到hive所在机器
+在hive中执行add jar操作，将jar加载到classpath中。
+在hive中创建模板函数，使得后边可以使用该函数名称调用实际的udf函数
+hive sql中像调用系统函数一样使用udf函数
+代码实现
+
+功能要求：实现当输入字符串超过2个字符的时候，多余的字符以”…”来表示。
+如“12”则返回“12”，如“123”返回“12…”
+自定义类、继承UDF、重写evaluate方法已在代码中体现
+import org.apache.hadoop.hive.ql.exec.UDF;
+/*
+ * 功能：实现当输入字符串超过2个字符的时候，多余的字符以"..."来表示。
+ * 输入/输出：* 如“12”则返回“12”，如“123”返回“12..."
+ */
+public class ValueMaskUDF extends UDF{
+       public String evaluate(String input,int maxSaveStringLength,String replaceSign) {
+             if(input.length()<=maxSaveStringLength){
+                    return input;
+             }
+             return input.substring(0,maxSaveStringLength)+replaceSign;
+       }
+       public static void main(String[] args) {
+             System.out.println(new ValueMaskUDF().evaluate("河北省",2,"..."));;
+       }
+}
+UDAF
+自定义udaf函数self_count，实现系统udaf count的功能
+
+Input/Output要求-要解决的问题
+
+in:out=n:1,即接受输入N条记录当中的数据，同时返回一条处理结果。
+属于最常见的自定义函数，像count,sum,avg,max等均是如此要求
+实现步骤
+
+自定义一个java类
+继承UDAF类
+内部定义一个静态类，实现UDAFEvaluator接口
+实现方法init,iterate,terminatePartial,merge,terminate，共5个方法. 详见下图
+在hive中执行add jar操作，将jar加载到classpath中。
+在hive中创建模板函数，使得后边可以使用该函数名称调用实际的udf函数
+hive sql中像调用系统函数一样使用udaf函数
+
+
+Hive_UDAF五个方法.png
+业务测试
+
+输入：
+
+
+输入.png
+输出：
+
+
+输出.png
+UDAF代码开发
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import org.apache.hadoop.hive.ql.exec.UDAF;
+import org.apache.hadoop.hive.ql.exec.UDAFEvaluator;
+import org.apache.log4j.Logger;
+/**
+* 实现多条数据合并成一条数据
+*/
+// 主类继承UDAF
+public class StudentScoreAggUDAF extends UDAF {
+    // 日志对象初始化
+    public static Logger logger = Logger.getLogger(StudentScoreAggUDAF.class);
+    // 静态类实现UDAFEvaluator
+    public static class Evaluator implements UDAFEvaluator {
+        // 设置成员变量，存储每个统计范围内的总记录数
+        private Map<String, String> courseScoreMap;
+
+        //初始化函数,map和reduce均会执行该函数,起到初始化所需要的变量的作用
+        public Evaluator() {
+            init();
+        }
+        // 初始化函数间传递的中间变量
+        public void init() {
+            courseScoreMap = new HashMap<String, String>();
+        }
+
+         //map阶段，返回值为boolean类型，当为true则程序继续执行，当为false则程序退出  
+        public boolean iterate(String course, String score) {
+            if (course == null || score == null) {
+                return true;
+            }
+            courseScoreMap.put(course, score);
+            return true;
+        }
+         /**
+         * 类似于combiner,在map范围内做部分聚合，将结果传给merge函数中的形参mapOutput  
+         * 如果需要聚合，则对iterator返回的结果处理，否则直接返回iterator的结果即可
+         */
+        public Map<String, String> terminatePartial() {
+            return courseScoreMap;
+        }
+         // reduce 阶段，用于逐个迭代处理map当中每个不同key对应的 terminatePartial的结果
+        public boolean merge(Map<String, String> mapOutput) {
+            this.courseScoreMap.putAll(mapOutput);
+            return true;
+        }
+        // 处理merge计算完成后的结果，即对merge完成后的结果做最后的业务处理
+        public String terminate() {
+            return courseScoreMap.toString();
+        }
+    }
+}
+测试sql语句
+
+select id,username,score_agg(course,score) from student_score group by id,username;
+自定义udaf实现max：https://www.cnblogs.com/itxuexiwang/p/6263110.html
+UDTF
+User-Defined Table-Generating Functions
+要解决一行输入多行输出的问题，问题的应用场景不少
+用udtf解决一行输入多行输出的不多，往往被lateral view explode+udf等替代实现，比直接用udtf会更简单、直接一些
+
+
+
+
+数仓--Hive-面试之Hive设置配置参数的方法，列举8个常用配置
+Hive设置配置参数的方法
+Hive提供三种可以改变环境变量的方法，分别是：
+（1）、修改${HIVE_HOME}/conf/hive-site.xml配置文件；
+（2）、命令行参数；
+（3）、在已经进入cli时进行参数声明。
+方法一：hive-site.xml配置参数
+在Hive中，所有的默认配置都在 "{HIVE_HOME}/conf/hive-default.xml "文件中，如果需要对默认的配置进行修改，可以创建一个 "hive-site.xml" 文件，放在 " {HIVE_HOME}/conf"目录下。里面可以对一些配置进行个性化设定。在hive-site.xml的格式如下：
+<configuration>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>/user/hive/warehouse</value>
+        <description>location of
+              default database for the warehouse</description>
+    </property>
+</configuration>
+所有的配置都是放在<configuration></configuration>标签之间，一个configuration标签里面可以存在多个<property></property>标签。<name>标签里面就是我们想要设定属性的名称；<value>标签里面是我们想要设定的值；<description;<标签是描述在这个属性的，可以不写。绝大多少配置都是在xml文件里面配置的，因为在这里做的配置都全局用户都生效，而且是永久的。用户自定义配置会覆盖默认配置。另外，Hive也会读入Hadoop的配置，因为Hive是作为Hadoop的客户端启动的，Hive的配置会覆盖Hadoop的配置。
+方法二：命令行参数
+在启动Hive cli的时候进行配置，可以在命令行添加-hiveconf param=value来设定参数，例如：
+hive --hiveconf mapreduce.job.queuename=queue1
+这样在Hive中所有MapReduce作业都提交到队列queue1中。这一设定对本次启动的会话有效，下次启动需要重新配置。
+方法三：进入cli时候声明
+在已经进入cli时进行参数声明，可以在HQL中使用SET关键字设定参数，例如：
+set mapreduce.job.queuename=queue1;
+上述三种设定方式的优先级依次递增。即参数声明覆盖命令行参数，命令行参数覆盖配置文件设定。
+
+列举8个常用的配置参数
+0-hive.fetch.task.conversion=more;将hive拉取的模式设置为more模式
+1-hive.exec.mode.local.auto 决定 Hive 是否应该自动地根据输入文件大小，在本地运行（在GateWay运行） ;
+2-hive.auto.convert.join ：是否根据输入小表的大小，自动将 Reduce 端的 Common Join 转化为 Map Join，从而加快大表关联小表的 Join 速度。 默认：false。
+3-mapred.reduce.tasks ：所提交 Job 的 reduer 的个数，使用 Hadoop Client 的配置。 默认是-1，表示Job执行的个数交由Hive来分配；
+mapred.map.tasks:设置提交Job的map端个数；
+4-hive.map.aggr=true 开启map端聚合；
+hive.groupby.skewindata=true ：决定 group by 操作是否支持倾斜的数据。
+原理是，在Group by中，对一些比较小的分区进行合并，默认是false；
+5-hive.merge.mapredfiles ：是否开启合并 Map/Reduce 小文件，对于 Hadoop 0.20 以前的版本，起一首新的 Map/Reduce Job，对于 0.20 以后的版本，则是起使用 CombineInputFormat 的 MapOnly Job。 默认是：false；
+6-hive.mapred.mode ：Map/Redure 模式，如果设置为 strict，将不允许笛卡尔积。 默认是：'nonstrict'；
+7-hive.exec.parallel ：是否开启 map/reduce job的并发提交。
+默认Map/Reduce job是顺序执行的，默认并发数量是8，可以配置。默认是：false；
+8-hive.exec.dynamic.partition =true：是否打开动态分区。 需要打开，默认：false；
+set hive.exec.dynamic.partition.mode=nonstirct
+这8个牢牢的背住吧，面试会被问道的
+
+
+
+数仓--Hive-面试之Hive数据倾斜的原因及主要解决方法
+对于参数命令的记忆，需要固定在
+
+数据倾斜产生的原因
+数据倾斜的原因很大部分是join倾斜和聚合倾斜两大类
+
+Hive倾斜之group by聚合倾斜
+原因：
+分组的维度过少，每个维度的值过多，导致处理某值的reduce耗时很久；
+对一些类型统计的时候某种类型的数据量特别多，其他的数据类型特别少。当按照类型进行group by的时候，会将相同的group by字段的reduce任务需要的数据拉取到同一个节点进行聚合，而当其中每一组的数据量过大时，会出现其他组的计算已经完成而这个reduce还没有计算完成，其他的节点一直等待这个节点的任务执行完成，所以会一直看到map 100% reduce99%的情况；
+解决方法：
+set hive.map.aggr=true;
+set hive.groupby.skewindata=true;
+原理：
+hive.map.aggr=true 这个配置代表开启map端聚合；
+hive.groupby.skewindata=true，当选项设定为true，生成的查询计划会有两个MR Job。当第一个MR Job中，Map的输出结果结合会随机分布到Reduce中，每个Reduce做部分聚合操作，并输出结果。这样处理的结果是相同的Group By Key有可能被分发到不同的Reduce中，从而达到负载均衡的目的。第二个MR Job再根据预处理的数据结果按照Group By Key分布到reduce中，这个过程可以保证相同的key被分到同一个reduce中，最后完成最终的聚合操作。
+Hive倾斜之Map和Reduce优化
+1-原因：当出现小文件过多，需要合并小文件。可以通过set hive.merge.mapredfiles=true来解决；
+2-原因：输入数据存在大块和小块的严重问题，比如 说：一个大文件128M，还有1000个小文件，每 个1KB。 解决方法：任务输入前做文件合并，将众多小文件合并成一个大文件。通过set hive.merge.mapredfiles=true解决；
+3-原因：单个文件大小稍稍大于配置的block块的大小，此时需要适当增加map的个数。解决方法：set mapred.map.tasks的个数；
+4-原因：文件大小适中，但是map端计算量非常大，如：select id,count(*),sum(case when...),sum(case when ...)...需要增加map个数。解决方法：set mapred.map.tasks个数，set mapred.reduce.tasks个数；
+Hive倾斜之HQL中包含count(distinct)时
+如果数据量非常大，执行如select a,count(distinct b) from t group by a;类型的sql时，会出现数据倾斜的问题。
+解决方法：使用sum...group by代替。如：select a,sum(1) from(select a,b from t group by a,b) group by a;
+Hive倾斜之HQL中join优化
+当遇到一个大表和一个小表进行join操作时。使用mapjoin将小表加载到内存中。如：select /*+ MAPJOIN(a) */ a.c1, b.c1 ,b.c2 from a join b where a.c1 = b.c1;
+遇到需要进行join，但是关联字段有数据为null，如表一的id需要和表二的id进行关联；
+解决方法1：id为null的不参与关联
+比如：
+select * from log a 
+　join users b 
+on a.id is not null and a.id = b.id 
+union all 
+select * from log a 
+where a.id is null; 
+解决方法2： 给null值分配随机的key值
+比如：
+select * from log a 
+left outer join users b 
+on 
+case when a.user_id is null 
+then concat(‘hive’,rand() ) 
+else a.user_id end = b.user_id; 
+合理设置Map数
+对上文描述的总结
+
+1）通常情况下，作业会通过input的目录产生一个或者多个map任务。
+主要的决定因素有：input的文件总个数，input的文件大小，集群设置的文件块大小。
+2）是不是map数越多越好？
+答案是否定的。如果一个任务有很多小文件（远远小于块大小128m），则每个小文件也会被当做一个块，用一个map任务来完成，而一个map任务启动和初始化的时间远远大于逻辑处理的时间，就会造成很大的资源浪费。而且，同时可执行的map数是受限的。
+3）是不是保证每个map处理接近128m的文件块，就高枕无忧了？
+答案也是不一定。比如有一个127m的文件，正常会用一个map去完成，但这个文件只有一个或者两个小字段，却有几千万的记录，如果map处理的逻辑比较复杂，用一个map任务去做，肯定也比较耗时。
+针对上面的问题2和3，我们需要采取两种方式来解决：即减少map数和增加map数；
+
+
+
+数仓--Hive-面试之Hive优化策略
+Hive的优化策略大致分为：配置优化(hive-site.xml和hive-cli执行前配置)、表优化、hive数据倾斜解决方案。
+回答的时候需要，需要准确的说出具体的配置参数，准确的说出具体的配置参数，这是一个深刻的教训。
+
+配置优化
+1-Fetch抓取配置
+Fetch抓取是指，Hive中对某些情况的查询可以不必使用MapReduce计算。例如：SELECT * FROM employees;在这种情况下，Hive可以简单地读取employee对应的存储目录下的文件，然后输出查询结果到控制台。
+在hive-default.xml.template文件中hive.fetch.task.conversion默认是more，老版本hive默认是minimal，该属性修改为more以后，在全局查找、字段查找、limit查找等都不走mapreduce。
+<property>
+    <name>hive.fetch.task.conversion</name>
+    <value>more</value>
+    <description>
+      Expects one of [none, minimal, more].
+      Some select queries can be converted to single FETCH task minimizing latency.
+      Currently the query should be single sourced not having any subquery and should not have
+      any aggregations or distincts (which incurs RS), lateral views and joins.
+      0. none : disable hive.fetch.task.conversion
+      1. minimal : SELECT STAR, FILTER on partition columns, LIMIT only
+      2. more  : SELECT, FILTER, LIMIT only (support TABLESAMPLE and virtual columns)
+    </description>
+  </property>
+2-开启Hive的本地模式
+大多数的Hadoop Job是需要Hadoop提供的完整的可扩展性来处理大数据集的。不过，有时Hive的输入数据量是非常小的。在这种情况下，为查询触发执行任务消耗的时间可能会比实际job的执行时间要多的多。对于大多数这种情况，Hive可以通过本地模式在单台机器上处理所有的任务。对于小数据集，执行时间可以明显被缩短。
+用户可以通过设置hive.exec.mode.local.auto的值为true，来让Hive在适当的时候自动启动这个优化。
+3-开启Hive的并行执行
+Hive会将一个查询转化成一个或者多个阶段。这样的阶段可以是MapReduce阶段、抽样阶段、合并阶段、limit阶段。或者Hive执行过程中可能需要的其他阶段。默认情况下，Hive一次只会执行一个阶段。不过，某个特定的job可能包含众多的阶段，而这些阶段可能并非完全互相依赖的，也就是说有些阶段是可以并行执行的，这样可能使得整个job的执行时间缩短。不过，如果有更多的阶段可以并行执行，那么job可能就越快完成。
+通过设置参数hive.exec.parallel值为true，就可以开启并发执行。不过，在共享集群中，需要注意下，如果job中并行阶段增多，那么集群利用率就会增加。
+设置参数：
+set hive.exec.parallel=true; //打开任务并行执行
+set hive.exec.parallel.thread.number=16; //同一个sql允许最大并行度，默认为8。
+4-Hive的严格模式
+Hive提供了一个严格模式，可以防止用户执行那些可能意向不到的不好的影响的查询。
+通过设置属性hive.mapred.mode值为默认是非严格模式nonstrict 。开启严格模式需要修改hive.mapred.mode值为strict，开启严格模式可以禁止3种类型的查询。
+1）对于分区表，除非where语句中含有分区字段过滤条件来限制范围，否则不允许执行。
+2）对于使用了order by语句的查询，要求必须使用limit语句。
+3）限制笛卡尔积的查询。
+5-JVM重用
+JVM重用是Hadoop调优参数的内容，其对Hive的性能具有非常大的影响，特别是对于很难避免小文件的场景或task特别多的场景，这类场景大多数执行时间都很短。
+Hadoop的默认配置通常是使用派生JVM来执行map和Reduce任务的。这时JVM的启动过程可能会造成相当大的开销，尤其是执行的job包含有成百上千task任务的情况。JVM重用可以使得JVM实例在同一个job中重新使用N次。N的值可以在Hadoop的mapred-site.xml文件中进行配置。通常在10-20之间，具体多少需要根据具体业务场景测试得出。
+<property>
+  <name>mapreduce.job.jvm.numtasks</name>
+  <value>10</value>
+  <description>How many tasks to run per jvm. If set to -1, there is
+  no limit. 
+  </description>
+</property>
+这个功能的缺点是，开启JVM重用将一直占用使用到的task插槽，以便进行重用，直到任务完成后才能释放。如果某个“不平衡的”job中有某几个reduce task执行的时间要比其他Reduce task消耗的时间多的多的话，那么保留的插槽就会一直空闲着却无法被其他的job使用，直到所有的task都结束了才会释放。
+6-开启Hive的推测执行
+在分布式集群环境下，因为程序Bug（包括Hadoop本身的bug），负载不均衡或者资源分布不均等原因，会造成同一个作业的多个任务之间运行速度不一致，有些任务的运行速度可能明显慢于其他任务（比如一个作业的某个任务进度只有50%，而其他所有任务已经运行完毕），则这些任务会拖慢作业的整体执行进度。为了避免这种情况发生，Hadoop采用了推测执行（Speculative Execution）机制，它根据一定的法则推测出“拖后腿”的任务，并为这样的任务启动一个备份任务，让该任务与原始任务同时处理同一份数据，并最终选用最先成功运行完成任务的计算结果作为最终结果。
+设置开启推测执行参数：Hadoop的mapred-site.xml文件中进行配置
+<property>
+  <name>mapreduce.map.speculative</name>
+  <value>true</value>
+  <description>If true, then multiple instances of some map tasks 
+               may be executed in parallel.</description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.speculative</name>
+  <value>true</value>
+  <description>If true, then multiple instances of some reduce tasks 
+               may be executed in parallel.</description>
+</property>
+
+不过hive本身也提供了配置项来控制reduce-side的推测执行：
+<property>
+    <name>hive.mapred.reduce.tasks.speculative.execution</name>
+    <value>true</value>
+    <description>Whether speculative execution for reducers should be turned on. </description>
+  </property>
+关于调优这些推测执行变量，还很难给一个具体的建议。如果用户对于运行时的偏差非常敏感的话，那么可以将这些功能关闭掉。如果用户因为输入数据量很大而需要执行长时间的map或者Reduce task的话，那么启动推测执行造成的浪费是非常巨大大。
+7-压缩
+开启Map输出阶段压缩
+
+开启map输出阶段压缩可以减少job中map和Reduce task间数据传输量。具体配置如下：
+1）开启hive中间传输数据压缩功能
+hive (default)>set hive.exec.compress.intermediate=true;
+2）开启mapreduce中map输出压缩功能
+hive (default)>set mapreduce.map.output.compress=true;
+3）设置mapreduce中map输出数据的压缩方式
+hive (default)>set mapreduce.map.output.compress.codec= org.apache.hadoop.io.compress.SnappyCodec;
+4）执行查询语句
+    hive (default)> select count(ename) name from emp;
+开启Reduce输出阶段压缩
+
+当Hive将输出写入到表中时，输出内容同样可以进行压缩。属性hive.exec.compress.output控制着这个功能。用户可能需要保持默认设置文件中的默认值false，这样默认的输出就是非压缩的纯文本文件了。用户可以通过在查询语句或执行脚本中设置这个值为true，来开启输出结果压缩功能。
+1）开启hive最终输出数据压缩功能
+hive (default)>set hive.exec.compress.output=true;
+2）开启mapreduce最终输出数据压缩
+hive (default)>set mapreduce.output.fileoutputformat.compress=true;
+3）设置mapreduce最终数据输出压缩方式
+hive (default)> set mapreduce.output.fileoutputformat.compress.codec = org.apache.hadoop.io.compress.SnappyCodec;
+4）设置mapreduce最终数据输出压缩为块压缩
+hive (default)> set mapreduce.output.fileoutputformat.compress.type=BLOCK;
+5）测试一下输出结果是否是压缩文件
+hive (default)> insert overwrite local directory '/opt/module/datas/distribute-result' select * from emp distribute by deptno sort by empno desc;
+Hive表优化
+1-小表、大表join
+将key相对分散，并且数据量小的表放在join的左边，这样可以有效减少内存溢出错误发生的几率；再进一步，可以使用Group让小的维度表（1000条以下的记录条数）先进内存。在map端完成reduce。
+实际测试发现：新版的hive已经对小表JOIN大表和大表JOIN小表进行了优化。小表放在左边和右边已经没有明显区别。
+2-大表join大表
+1)-空值过滤
+有时join超时是因为某些key对应的数据太多，而相同key对应的数据都会发送到相同的reducer上，从而导致内存不够。此时我们应该仔细分析这些异常的key，很多情况下，这些key对应的数据是异常数据，我们需要在SQL语句中进行过滤。例如key对应的字段为空。
+2)-空key转换
+有时虽然某个key为空对应的数据很多，但是相应的数据不是异常数据，必须要包含在join的结果中，此时我们可以表a中key为空的字段赋一个随机的值，使得数据随机均匀地分不到不同的reducer上。
+3-MapJoin
+如果不指定MapJoin或者不符合MapJoin的条件，那么Hive解析器会将Join操作转换成Common Join，即：在Reduce阶段完成join。容易发生数据倾斜。可以用MapJoin把小表全部加载到内存在map端进行join，避免reducer处理。
+1）开启MapJoin参数设置：
+（1）设置自动选择Mapjoin
+set hive.auto.convert.join = true; 默认为true
+（2）大表小表的阈值设置（默认25M一下认为是小表）：
+set hive.mapjoin.smalltable.filesize=25000000;
+4-Group By
+默认情况下，Map阶段同一Key数据分发给一个reduce，当一个key数据过大时就倾斜了。
+并不是所有的聚合操作都需要在Reduce端完成，很多聚合操作都可以先在Map端进行部分聚合，最后在Reduce端得出最终结果。
+1）开启Map端聚合参数设置
+（1）是否在Map端进行聚合，默认为True
+hive.map.aggr = true
+（2）在Map端进行聚合操作的条目数目
+hive.groupby.mapaggr.checkinterval = 100000
+（3）有数据倾斜的时候进行负载均衡（默认是false）
+hive.groupby.skewindata = true
+当选项设定为 true，生成的查询计划会有两个MR Job。第一个MR Job中，Map的输出结果会随机分布到Reduce中，每个Reduce做部分聚合操作，并输出结果，这样处理的结果是相同的Group By Key有可能被分发到不同的Reduce中，从而达到负载均衡的目的；第二个MR Job再根据预处理的数据结果按照Group By Key分布到Reduce中（这个过程可以保证相同的Group By Key被分布到同一个Reduce中），最后完成最终的聚合操作。
+5-Count(Distinct) 去重统计
+数据量小的时候无所谓，数据量大的情况下，由于COUNT DISTINCT操作需要用一个Reduce Task来完成，这一个Reduce需要处理的数据量太大，就会导致整个Job很难完成，一般COUNT DISTINCT使用先GROUP BY再COUNT的方式替换。
+6-笛卡儿积
+尽量避免笛卡尔积，join的时候不加on条件，或者无效的on条件，Hive只能使用1个reducer来完成笛卡尔积。
+7-行列过滤
+列处理：在SELECT中，只拿需要的列，如果有，尽量使用分区过滤，少用SELECT *。
+行处理：在分区剪裁中，当使用外关联时，如果将副表的过滤条件写在Where后面，那么就会先全表关联，之后再过滤。
+Hive数据倾斜解决方案
+
+
+
+数仓--Hive-面试之向Hive中传入变量的方式
+Hive向程序中传递变量的方式
+暴力替换
+字符串替换
+正则替换
+模板引擎
+系统环境变量
+shell环境变量：${env:varname}
+system系统变量：${system:varname}
+hive 命令参数
+hivevar方式：${hivevar:varname}
+hiveconf方式：${hiveconf:varname}
+hive接收外部变量方式详解
+使用Hive编写程序最常用的方法是将Hive语句写到文件中，然后使用hive -f filename.hql来批量执行查询语句。经常需要将外部参数传入到hql语句中替换其中的变量来动态执行任务，比如动态设定数据库名、表名、时间值、字段序列等变量，以达到脚本泛化执行的目的。
+在使用hive开发数据分析代码时，经常会遇到需要改变运行参数的情况，比如select语句中对日期字段值的设定，可能不同时间想要看不同日期的数据，这就需要能动态改变日期的值。如果开发量较大、参数多的话，使用变量来替代原来的字面值非常有必要，对传入的方式进行总结。
+数据准备
+hive 表中创建数据
+use test;
+ 
+---学生信息表
+create table IF NOT EXISTS student(
+sno bigint comment '学号' ,
+sname string comment '姓名' ,
+sage bigint comment '年龄' ,
+pdate string comment '入学日期'
+)
+COMMENT '学生信息表'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+ 
+LOAD DATA LOCAL INPATH
+'/home/users/root/testdata_student'
+INTO TABLE student;
+测试数据
+1 name1 21 20130901
+2 name2 22 20130901
+3 name3 23 20130901
+4 name4 24 20130901
+5 name5 25 20130902
+6 name6 26 20130902
+7 name7 27 20130902
+8 name8 28 20130902
+9 name9 29 20130903
+10 name10 30 20130903
+11 name11 31 20130903
+12 name12 32 20130904
+13 name13 33 20130904
+1-shell中设置变量，hive -e中直接使用
+测试脚本
+#!/bin/bash
+tablename="student"
+limitcount="8"
+hive -S -e "use test; select * from ${tablename} limit ${limitcount};"
+可以正常运行
+由于hive自身是类SQL语言，缺乏shell的灵活性和对过程的控制能力，所以采用shell+hive的开发模式非常常见，在shell中直接定义变量，在hive -e语句中就可以直接引用；
+注意
+
+注意：使用 hiveconf 定义，在hive -e中是不能使用的
+修改一下刚才的shell文件，采用-hiveconf的方法定义日期参数：
+#!/bin/bash
+tablename="student"
+limitcount="8"
+ 
+hive -S \
+    -hiveconf enter_school_date="20130902" \
+    -hiveconf min_age="26" \
+    -e \
+    "    use test; \
+        select * from ${tablename} \
+        where \
+            pdate='${hiveconf:enter_school_date}' \
+            and \
+            sage>'${hiveconf:min_age}' \
+        limit ${limitcount};"
+运行会失败，因为该脚本在shell环境中运行的，于是shell试图去解析{hiveconf:enter_school_date}和${hiveconf:min_age}变量，但是这两个SHELL变量并没有定义，所以会以空字符串放在这个位置。
+方法2：使用-hiveconf定义，在SQL文件中使用
+因为换行什么的很不方便，hive -e只适合写少量的SQL代码，所以一般都会写很多hql文件，然后使用hive –f 的方法来调用，这时候可以通过-hiveconf定义一些变量，然后在SQL中直接使用。
+先编写shell文件
+#!/bin/bash
+ 
+hive -hiveconf enter_school_date="20130902" -hiveconf min_ag="26" -f testvar.sql
+被调用脚本
+use test;
+select * from student
+where
+pdate='${hiveconf:enter_school_date}'
+and
+sage > '${hiveconf:min_ag}'
+limit 8;
+方法3：使用hivevar，再sql文件中使用
+再hql脚本中写使用set hivevar:varname的方式
+定义脚本
+#!/bin/bash
+hive -f testvar.sql
+sql脚本
+use test;
+set hivevar:center_school_date="20130920";
+set hivevar:min_age="26";
+select * from student
+where
+pdate='${hivevar:enter_school_date}'
+and
+sage > '${hivevar:min_ag}'
+limit 8;
+总结
+三种方式，各有优劣，可以按照代码特点进行选择；
+但是再面试的过程中，都要进行准确的说出。
+
+
+
+
+数仓--Hive-面试之Hive动态分区
+面试如果被问道，那么需要说出彩来，特别时参数
+
+Hive动态分区参数配置
+往hive分区表中插入数据时，如果需要创建的分区很多，比如以表中某个字段进行分区存储，则需要复制粘贴修改很多sql去执行，效率低。因为hive是批处理系统，所以hive提供了一个动态分区功能，其可以基于查询参数的位置去推断分区的名称，从而建立分区。
+使用动态分区表必须配置的参数
+
+set hive.exec.dynamic.partition =true（默认false）,表示开启动态分区功能；
+set hive.exec.dynamic.partition.mode = nonstrict(默认strict),表示允许所有分区都是动态的，否则必须有静态分区字段；
+动态分区相关调优参数
+
+set hive.exec.max.dynamic.partitions.pernode=100 （默认100，一般可以设置大一点，比如1000）； 表示每个maper或reducer可以允许创建的最大动态分区个数，默认是100，超出则会报错。
+set hive.exec.max.dynamic.partitions =1000(默认值) ； 表示一个动态分区语句可以创建的最大动态分区个数，超出报错；
+set hive.exec.max.created.files =10000(默认) 全局可以创建的最大文件个数，超出报错。
+动态分区表实践
+默认已经hive的动态分区和nonstrict模式；
+1-创建单一字段分区表
+ create table dpartition(id int ,name string )
+   partitioned by(ct string  );
+2-单个字段的动态分区
+以city建立动态分区
+hive>
+ set  hive.exec.dynamic.partition=true;  #开启动态分区，默认是false
+ set hive.exec.dynamic.partition.mode=nonstrict; #开启允许所有分区都是动态的，否则必须要有静态分区才能使用。
+-- 开始抽取
+ insert overwrite table dpartition
+ partition(ct)
+ select id ,name,city from  mytest_tmp2_p; 
+要点：因为dpartition表中只有两个字段，所以当我们查询了三个字段时（多了city字段），所以系统默认以最后一个字段city为分区名，因为分区表的分区字段默认也是该表中的字段，且依次排在表中字段的最后面。所以分区需要分区的字段只能放在后面，不能把顺序弄错。如果我们查询了四个字段的话，则会报错，因为该表加上分区字段也才三个。要注意系统是根据查询字段的位置推断分区名的，而不是字段名称。
+hive>--查看可知，hive已经完成了以city字段为分区字段，实现了动态分区。
+hive (fdm_sor)> show partitions dpartition;
+partition
+ct=beijing
+ct=beijing1
+注意：使用，insert...select 往表中导入数据时，查询的字段个数必须和目标的字段个数相同，不能多，也不能少,否则会报错。但是如果字段的类型不一致的话，则会使用null值填充，不会报错。而使用load data形式往hive表中装载数据时，则不会检查。如果字段多了则会丢弃，少了则会null值填充。同样如果字段类型不一致，也是使用null值填充。
+3-多个分区字段，实现半自动分区
+1.创建一个只有一个字段，两个分区字段的分区表
+hive (fdm_sor)> create table ds_parttion(id int ) 
+              > partitioned by (state string ,ct string );
+2.往该分区表半动态分区插入数据 
+hive>
+ set hive.exec.dynamic.partition=true;
+ set hive.exec.dynamic.partition.mode=nonstrict;
+ insert overwrite table ds_parttion
+ partition(state='china',ct)  #state分区为静态，ct为动态分区，以查询的city字段为分区名
+ select id ,city from  mytest_tmp2_p; 
+ 
+3.查询结果显示：
+hive (fdm_sor)> select *  from ds_parttion where state='china'
+              > ;
+ds_parttion.id  ds_parttion.state       ds_parttion.ct
+4       china   beijing
+3       china   beijing
+2       china   beijing
+1       china   beijing
+4       china   beijing1
+3       china   beijing1
+2       china   beijing1
+1       china   beijing1
+ 
+hive (fdm_sor)> select *  from ds_parttion where state='china' and ct='beijing';
+ds_parttion.id  ds_parttion.state       ds_parttion.ct
+4       china   beijing
+3       china   beijing
+2       china   beijing
+1       china   beijing
+ 
+hive (fdm_sor)> select *  from ds_parttion where state='china' and ct='beijing1';
+ds_parttion.id  ds_parttion.state       ds_parttion.ct
+4       china   beijing1
+3       china   beijing1
+2       china   beijing1
+1       china   beijing1
+Time taken: 0.072 seconds, Fetched: 4 row(s)
+4-多个分区字段，全部实现动态分区插入
+ set hive.exec.dynamic.partition=true;
+ set hive.exec.dynamic.partition.mode=nonstrict;
+ insert overwrite table ds_parttion
+ partition(state,ct)
+ select id ,country,city from  mytest_tmp2_p; 
+注意：字段的个数和顺序不能弄错。
+注意动态分区字段的顺序
+总结
+会写当然还需要会说出来，重点在于如何实现，怎么实现和需要设置的参数有哪些。
+曾经在面试中不能说出具体的配置参数，被血虐和当场拒绝。
+
+
+
+
+数仓--Hive-面试之Hive手写SQL案例
+既然是手写代码，那么就需要会手写，手写这个是重点
+
+1-请详细描述将一个有结构的文本文件student.txt导入到一个hive表中的步骤，及其关键字
+假设student.txt 有以下几列：id,name,gender三列
+1-创建数据库 create database student_info;
+2-创建hive表 student
+create external table student_info.student(
+id string comment '学生id',
+name string comment '学生姓名',
+gender string comment '学生性别'
+) comment "学生信息表"
+row format delimited fields terminated by '\t'
+line terminated by '\n'
+stored as textfile
+location "/user/root/student";
+3-加载数据
+load data local inpath '/root/student.txt' into table student_info.student  location "/user/root/student" ;
+4- 进入hive-cli，查看相应的表结构
+select * from student_info.student limit 10；
+划重点：要回手写代码
+
+2-利用HQL实现以下功能
+2-1-创建表
+创建员工基本信息表(EmployeeInfo)，字段包括(员工 ID，员工姓名，员工身份证号，性别，年龄，所属部门，岗位，入职公司时间，离职公司时间)，分区字段为入职公司时间，其行分隔符为”\n “，字段分隔符为”\t “。其中所属部门包括行政部、财务部、研发部、教学部，其对应岗位包括行政经理、行政专员、财务经理、财务专员、研发工程师、测试工程师、实施工程师、讲师、助教、班主任等，时间类型值如：2018-05-10 11:00:00
+
+创建员工收入表(IncomeInfo)，字段包括(员工 ID，员工姓名，收入金额，收入所属
+月份，收入类型，收入薪水的时间)，分区字段为发放薪水的时间，其中收入类型包括薪资、奖金、公司福利、罚款四种情况 ; 时间类型值如：2018-05-10 11:00:00。
+
+注意：时间类型是2018-05-10 11:00:00，需要对字段进行处理
+
+创建员工基本信息表
+create external table test.employee_info(
+id string comment '员工id',
+name string comment '员工姓名',
+indentity_card string comment '身份证号',
+gender string comment '性别',
+department string comment '所属部门',
+post string comment '岗位',
+hire_date string comment '入职时间',
+departure_date string comment '离职时间'
+) comment "员工基本信息表"
+partitioned by (day string comment "员工入职时间")
+row format delimited fields terminated by '\t'
+lines terminated by  '\n'
+stored as textfile 
+location '/user/root/employee';
+创建员工收入表
+create external table test.income_info(
+id string comment '员工id',
+name string comment '员工姓名',
+income_data string comment '收入',
+income_month string comment '收入所属月份',
+income_type string comment '收入类型',
+income_datetime string comment '收入薪水时间'
+) comment '员工收入表'
+partitioned by (day string comment "员工发放薪水时间")
+row format delimited fields terminated by '\t'
+lines terminated by  '\n'
+stored as textfile 
+location '/user/root/income';
+2-2用 HQL 实现，求公司每年的员工费用总支出各是多少，并按年份降序排列?
+重点对时间类型 2018-05-10 11:00:00 进行内置函数处理
+需要读取income_info全量表，按照分区时间进行聚合，因为收入类型里面有罚款一项，所以需要在员工发放的钱中扣除罚款的钱。
+不采用join、对数据一次遍历输出结果，
+对于大数据量的情况下，要考虑对数据进行一次遍历求出结果
+select 
+    income_year,(income_data-(nvl(penalty_data,0))) as company_cost
+from
+(
+    -- 统计员工收入金额和罚款金额，输出 2019 500 10
+    select 
+        income_year,
+        sum(case when income_type!='罚款' then data_total else 0 end) as income_data,
+        sum(case when income_type='罚款' then data_total else 0 end) as penalty_data
+    from
+    (
+    -- 按照年份、收入类型求收入金额
+    select 
+        year(to_date(income_datetime)) as income_year,
+        income_type,
+        sum(income_data) as data_total
+    from
+        test.income_info
+    group by 
+        year(to_date(income_datetime)) ,income_type
+    ) tmp_a
+    group by  tmp_a.income_year
+) as  temp
+order by income_year desc;
+2-3用 HQL 实现，求各部门每年的员工费用总支出各是多少，并按年份降序，按部门的支出升序排列？
+保证对数据的一次遍历
+--根据id关联得出department,和消费类型
+select 
+    income_year,department,
+    (sum(case when income_type!='罚款' then income_data else 0 end) - sum(case when income_type='罚款' then income_data else 0 end) ) as department_cost
+from
+(
+    -- 先对员工进行薪资类别的聚合统计
+    select 
+        id,year(to_date(income_datetime)) as income_year,income_type,sum(income_data) as income_data
+    from 
+        test.income_info
+    group by 
+    year(to_date(income_datetime)),id,income_type
+) temp_a
+inner join
+    test.employee_info b
+on
+    temp_a.id=b.id
+group by
+    department,income_year
+order by income_year desc , department_cost asc;
+2-4用 HQL 实现，求各部门历史所有员工费用总支出各是多少，按总支出多少排名降序，遇到值相等情况，不留空位。
+根据2-3中的中间结果进行修改
+注意历史上所有的数据
+select department,department_cost,dense_rank() over(order by department_cost desc) as cost_rank
+from
+(
+--根据id关联得出department,和消费类型
+select 
+    department,
+    (sum(case when income_type!='罚款' then income_data else 0 end) - sum(case when income_type='罚款' then income_data else 0 end) ) as department_cost
+from
+(
+    -- 先对员工进行薪资类别的聚合统计
+    select 
+        id,income_type,sum(income_data) as income_data
+    from 
+        test.income_info
+    group by 
+    id,income_type
+) temp_a
+inner join
+    test.employee_info b
+on
+    temp_a.id=b.id
+group by
+    department
+) tmp_c ;
+2-5 用 HQL 实现，创建并生成员工薪资收入动态变化表，即员工 ID，员工姓名，员工本月薪资，本月薪资发放时间，员工上月薪资，上月薪资发放时间。分区字段为本月薪资发放时间。
+感觉应该使用动态分区插入的特性？-但是不知道该怎么写
+先创建表，再采用insert into table **** select ***
+要考虑到离职和入职的员工，这一点需要考虑到，full join
+两张表进行full join，过滤day is null
+需要concat year month to_date内置函数处理
+这个题需要考虑的比较多
+create external table test.income_dynamic(
+id string comment '员工id',
+name string comment '员工姓名',
+income_data_current string comment '本月收入',
+income_datetime_current string comment 本月'收入薪水时间',
+income_data_last   string comment '上月收入',
+income_datetime_last string comment '上月收入薪水时间',
+) comment '员工收入动态表'
+partitioned by (day string comment "员工本月发放薪水时间")
+row format delimited fields terminated by '\t'
+lines terminated by  '\n'
+stored as textfile 
+location '/user/root/income';
+-- ------------------------------------------------------------------------------
+-- 动态分区插入
+-- 插入语句
+-- 采用full join
+insert into table test.income_dynamic partition(day)
+select 
+    (case when id_a is not null then id_a else id_b end ) as id,
+    (case when name_a is not null then name_a else name_b end )  as name ,
+    income_data,income_datetime,income_data_b,income_datetime_b,day
+from
+    (
+    -- 选出表中所有的数据
+    select
+        id as id_a,name as name_a,income_data,income_datetime,day,concat(year(to_date(day)),month(to_date(day))) as day_flag
+    from 
+        test.income_info
+    where 
+        income_type='薪资' ) tmp_a
+full outer join
+    (
+    -- 将表中的收到薪水的日期整体加一个月
+    select
+        id as id_b,name as name_b,income_data as income_data_b,income_datetime as  income_datetime_b,concat(year(add_months(to_date(day),1)),month(add_months(to_date(day),1))) as   month_flag
+    from 
+        test.income_info
+    where 
+        income_type='薪资'
+    ) tmp_b
+    on 
+        tmp_a.day_flag=tmp_b.month_flag
+    and 
+        tmp_a.id_a=tmp_b.id_b
+where day is not null
+;
+2-6 用 HQL 实现，薪资涨幅方面，2018 年 5 月份谁的工资涨的最多，谁的涨幅最大？
+再2-5的基础上做比较简单，仅仅利用select部分即可；或者是再2-5的基础上做就行
+Hive行列转换
+１、问题
+hive如何将
+a       b       1
+a       b       2
+a       b       3
+c       d       4
+c       d       5
+c       d       6
+变为：
+a       b       1,2,3
+c       d       4,5,6
+-------------------------------------------------------------------------------------------
+２、数据
+test.txt
+a       b       1 
+a       b       2 
+a       b       3 
+c       d       4 
+c       d       5 
+c       d       6
+------------------------------------------------------------------------------------------- 
+３、答案
+1.建表
+drop table tmp_jiangzl_test;
+create table tmp_jiangzl_test
+(
+col1 string,
+col2 string,
+col3 string
+)
+row format delimited fields terminated by '\t'
+stored as textfile;
+-- 加载数据
+load data local inpath '/home/jiangzl/shell/test.txt' into table tmp_jiangzl_test;
+2.处理
+select col1,col2,concat_ws(',',collect_set(col3)) 
+from tmp_jiangzl_test  
+group by col1,col2;
+---------------------------------------------------------------------------------------
+collect_set/concat_ws语法参考链接：https://blog.csdn.net/waiwai3/article/details/79071544
+https://blog.csdn.net/yeweiouyang/article/details/41286469   [Hive]用concat_w实现将多行记录合并成一行
+---------------------------------------------------------------------------------------
+二、列转行
+１、问题
+hive如何将
+a       b       1,2,3
+c       d       4,5,6
+变为：
+a       b       1
+a       b       2
+a       b       3
+c       d       4
+c       d       5
+c       d       6
+---------------------------------------------------------------------------------------------
+2、答案
+1.建表
+
+drop table tmp_jiangzl_test;
+create table tmp_jiangzl_test
+(
+col1 string,
+col2 string,
+col3 string
+)
+row format delimited fields terminated by '\t'
+stored as textfile;
+处理：
+select col1, col2, col5
+from tmp_jiangzl_test a 
+lateral  view explode(split(col3,',')) b AS col5;
+---------------------------------------------------------------------------------------
+lateral  view 语法参考链接：
+https://blog.csdn.net/clerk0324/article/details/58600284
+
+Hive实现wordcount
+1.创建数据库
+create database wordcount;
+2.创建外部表
+create external table word_data(line string) row format delimited fields terminated by ',' location '/home/hadoop/worddata';
+3.映射数据表
+load data inpath '/home/hadoop/worddata' into table word_data;
+4.这里假设我们的数据存放在hadoop下，路径为：/home/hadoop/worddata，里面主要是一些单词文件，内容大概为：
+hello man
+what are you doing now
+my running
+hello
+kevin
+hi man
+执行了上述hql就会创建一张表src_wordcount，内容是这些文件的每行数据，每行数据存在字段line中，select * from word_data;就可以看到这些数据
+
+5.根据MapReduce的规则，我们需要进行拆分，把每行数据拆分成单词，这里需要用到一个hive的内置表生成函数（UDTF）：explode(array)，参数是array，其实就是行变多列：
+
+create table words(word string);
+insert into table words select explode(split(line, " ")) as word from word_data;
+
+6.查看words表内容
+OK
+hello
+man
+what
+are
+you
+doing
+now
+my
+running
+hello
+kevin
+hi
+man
+split是拆分函数，跟java的split功能一样，这里是按照空格拆分，所以执行完hql语句，words表里面就全部保存的单个单词
+7.group by统计单词
+    select word, count(*) from wordcount.words group by word;
+wordcount.words 库名称.表名称，group by word这个word是create table words(word string) 命令创建的word string
+
+结果：
+are     1
+doing   1
+hello   2
+hi      1
+kevin   1
+man     2
+my      1
+now     1
+running 1
+what    1
+you     1
+Hive取TopN
+rank() over()
+dense_rank() over()
+row_number() over()
+求取指定状态下的订单id
+给一张订单表，统计只购买过面粉的用户；（重点在于仅仅购买过面粉的客户）
+eg：order:order_id,buyer_id,order_time.....
+在保证一次遍历的情况下,重点是O(1)复杂度
+
+select buyer_id
+from
+(
+select buyer_id,sum(case when order_id='面粉' then 0 else 1 end) as flag
+from order
+) as tmp
+where flag=0;
+微博体系中互粉的有多少组
+在微博粉丝表中，互相关注的人有多少组，例如：A-->B;B-->A；A和B互粉，称为一组。
+表结构：id,keep_id,time.... (id,keep_id可作为联合主键)
+借助Hive进行实现
+select count(*)/2 as weibo_relation_number
+from
+(
+  (select concat(id,keep_id) as flag from weibo_relation)
+  union all  --全部合并到一起，不能提前去重
+  (select concat(keep_id,id) as flag from weibo_relation)
+) as tmp
+having count(flag) =2
+group by flag;
+购买了香蕉的人买了多少东西
+这个是一个很经典的问题，购买了香蕉的人买了多少东西
+数据还是延用上一个问题的数据和表结构，即理解为关注C的人总共关注了多少人
+仔细理解是需要对关注的人进行去重统计
+select count(distinct keep_id) as total_keep_id
+from weibo_relation
+where id
+  in
+(select id from weibo_relation where keep_id='c')
+
+
+数仓--Hive-面试之Hive分析窗口函数
+数据准备
+CREATE EXTERNAL TABLE lxw1234 (
+cookieid string,
+createtime string,   --day 
+pv INT
+) ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+stored as textfile location '/tmp/lxw11/';
+ 
+DESC lxw1234;
+cookieid                STRING 
+createtime              STRING 
+pv                      INT 
+ 
+hive> select * from lxw1234;
+OK
+cookie1 2015-04-10      1
+cookie1 2015-04-11      5
+cookie1 2015-04-12      7
+cookie1 2015-04-13      3
+cookie1 2015-04-14      2
+cookie1 2015-04-15      4
+cookie1 2015-04-16      4
+分析
+SELECT cookieid,
+createtime,
+pv,
+SUM(pv) OVER(PARTITION BY cookieid ORDER BY createtime) AS pv1, -- 默认为从起点到当前行
+SUM(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS pv2, --从起点到当前行，结果同pv1 
+SUM(pv) OVER(PARTITION BY cookieid) AS pv3,                             --分组内所有行
+SUM(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS pv4,   --当前行+往前3行
+SUM(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS pv5,    --当前行+往前3行+往后1行
+SUM(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS pv6   ---当前行+往后所有行  
+FROM lxw1234;
+ 
+cookieid createtime     pv      pv1     pv2     pv3     pv4     pv5      pv6 
+-----------------------------------------------------------------------------
+cookie1  2015-04-10      1       1       1       26      1       6       26
+cookie1  2015-04-11      5       6       6       26      6       13      25
+cookie1  2015-04-12      7       13      13      26      13      16      20
+cookie1  2015-04-13      3       16      16      26      16      18      13
+cookie1  2015-04-14      2       18      18      26      17      21      10
+cookie1  2015-04-15      4       22      22      26      16      20      8
+cookie1  2015-04-16      4       26      26      26      13      13      4
+pv1: 分组内从起点到当前行的pv累积，如，11号的pv1=10号的pv+11号的pv, 12号=10号+11号+12号
+pv2: 同pv1
+pv3: 分组内(cookie1)所有的pv累加
+pv4: 分组内当前行+往前3行，如，11号=10号+11号， 12号=10号+11号+12号， 13号=10号+11号+12号+13号， 14号=11号+12号+13号+14号
+pv5: 分组内当前行+往前3行+往后1行，如，14号=11号+12号+13号+14号+15号=5+7+3+2+4=21
+pv6: 分组内当前行+往后所有行，如，13号=13号+14号+15号+16号=3+2+4+4=13，14号=14号+15号+16号=2+4+4=10
+如果不指定ROWS BETWEEN,默认为从起点到当前行;
+如果不指定ORDER BY，则将分组内所有值累加;
+关键是理解ROWS BETWEEN含义,也叫做WINDOW子句：
+PRECEDING：往前
+FOLLOWING：往后
+CURRENT ROW：当前行
+UNBOUNDED：起点，UNBOUNDED PRECEDING 表示从前面的起点， UNBOUNDED FOLLOWING：表示到后面的终点。
+
+–其他AVG，MIN，MAX，和SUM用法一样。
+
+AVG
+--AVG
+SELECT cookieid,
+createtime,
+pv,
+AVG(pv) OVER(PARTITION BY cookieid ORDER BY createtime) AS pv1, -- 默认为从起点到当前行
+AVG(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS pv2, --从起点到当前行，结果同pv1 
+AVG(pv) OVER(PARTITION BY cookieid) AS pv3,                             --分组内所有行
+AVG(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS pv4,   --当前行+往前3行
+AVG(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS pv5,    --当前行+往前3行+往后1行
+AVG(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS pv6   ---当前行+往后所有行  
+FROM lxw1234; 
+cookieid createtime     pv      pv1     pv2     pv3     pv4     pv5      pv6 
+-----------------------------------------------------------------------------
+cookie1 2015-04-10      1       1.0     1.0     3.7142857142857144      1.0     3.0     3.7142857142857144
+cookie1 2015-04-11      5       3.0     3.0     3.7142857142857144      3.0     4.333333333333333       4.166666666666667
+cookie1 2015-04-12      7       4.333333333333333       4.333333333333333       3.7142857142857144      4.333333333333333       4.0     4.0
+cookie1 2015-04-13      3       4.0     4.0     3.7142857142857144      4.0     3.6     3.25
+cookie1 2015-04-14      2       3.6     3.6     3.7142857142857144      4.25    4.2     3.3333333333333335
+cookie1 2015-04-15      4       3.6666666666666665      3.6666666666666665      3.7142857142857144      4.0     4.0     4.0
+cookie1 2015-04-16      4       3.7142857142857144      3.7142857142857144      3.7142857142857144      3.25    3.25    4.0
+MIN
+--MIN
+SELECT cookieid,
+createtime,
+pv,
+MIN(pv) OVER(PARTITION BY cookieid ORDER BY createtime) AS pv1, -- 默认为从起点到当前行
+MIN(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS pv2, --从起点到当前行，结果同pv1 
+MIN(pv) OVER(PARTITION BY cookieid) AS pv3,                                                                                                                             --分组内所有行
+MIN(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS pv4,   --当前行+往前3行
+MIN(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS pv5,    --当前行+往前3行+往后1行
+MIN(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS pv6   ---当前行+往后所有行  
+FROM lxw1234;
+ 
+cookieid createtime     pv      pv1     pv2     pv3     pv4     pv5      pv6 
+-----------------------------------------------------------------------------
+cookie1 2015-04-10      1       1       1       1       1       1       1
+cookie1 2015-04-11      5       1       1       1       1       1       2
+cookie1 2015-04-12      7       1       1       1       1       1       2
+cookie1 2015-04-13      3       1       1       1       1       1       2
+cookie1 2015-04-14      2       1       1       1       2       2       2
+cookie1 2015-04-15      4       1       1       1       2       2       4
+cookie1 2015-04-16      4       1       1       1       2       2       4
+MAX
+----MAX
+SELECT cookieid,
+createtime,
+pv,
+MAX(pv) OVER(PARTITION BY cookieid ORDER BY createtime) AS pv1, -- 默认为从起点到当前行
+MAX(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS pv2, --从起点到当前行，结果同pv1 
+MAX(pv) OVER(PARTITION BY cookieid) AS pv3,                             --分组内所有行
+MAX(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) AS pv4,   --当前行+往前3行
+MAX(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS pv5,    --当前行+往前3行+往后1行
+MAX(pv) OVER(PARTITION BY cookieid ORDER BY createtime ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS pv6   ---当前行+往后所有行  
+FROM lxw1234;
+ 
+cookieid createtime     pv      pv1     pv2     pv3     pv4     pv5      pv6 
+-----------------------------------------------------------------------------
+cookie1 2015-04-10      1       1       1       7       1       5       7
+cookie1 2015-04-11      5       5       5       7       5       7       7
+cookie1 2015-04-12      7       7       7       7       7       7       7
+cookie1 2015-04-13      3       7       7       7       7       7       4
+cookie1 2015-04-14      2       7       7       7       7       7       4
+cookie1 2015-04-15      4       7       7       7       7       7       4
+cookie1 2015-04-16      4       7       7       7       4       4       4
+
+
+学习网址：
+https://www.jianshu.com/p/b0b77b045fab
+
+
+
+熟悉 Hive、Spark 等分布式计算平台，了解其基本原理
+熟练使用 Hive Sql，熟悉 cube、row_number、rollup等常用数据分析函数，能够完成日常数据分析工作
+熟悉数据仓库原理，了解维度建模和数据分层，能够根据业务场景设计整套数据模型
+熟悉数据治理，能够设计和实现元数据管理系统
+有定期阅读论文的习惯，能将Google关于元数据管理的内容融入元数据系统设计中。
+编了点内容，不严谨的地方，请勿见怪。

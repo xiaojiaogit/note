@@ -1,0 +1,25 @@
+JumpServer 堡垒机笔记
+
+下载链接：
+	GitHub：https://github.com/jumpserver
+	官网：https://www.jumpserver.org/
+	开源文档：https://docs.jumpserver.org/zh/master/
+	
+安装1(自动安装)：
+	wget https://github.com/jumpserver/jumpserver/releases/download/v2.1.0/quick_start.sh
+	./quick_start.sh
+	
+安装2(手动安装)：	
+	yum -y install git
+	
+	git clone --depth=1 https://github.com/jumpserver/setuptools.git
+	cd setuptools
+	ls
+	cp config_example.conf config.conf
+	./jmsctl.sh    ----> 可以看到一些帮助信息
+	./jmsctl.sh install  -----> 安装服务
+	在安装的时候如过docker下载镜像慢的话可以自己配置加速器
+
+
+
+

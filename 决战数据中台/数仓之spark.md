@@ -341,12 +341,188 @@ rightOuterJoin  ---> 以右表为主，左表和右表进行匹配
 fullOuterJoin   ---> 将左表和右表join与没有join上的都显示出来，key需要相等【全关联】
 cogroup ---》 协分组，有点跟fullOuterJoin类似，但是没有关联上的返回CompactBuffer(),可以写多个rdd，例如：cogroup(rdd1,rdd2).collect 最多支持4个rdd进行处理
 
+aggregate(0)()
 aggregateByKey ---> 按照key进行聚合，跟 reducerByKey 类似，可以输入两个函数，第一个是局部聚合的函数，第二个是全局集合的函数,初始值只在局部聚合时使用，全局聚合不适用初始值，比reducerByKey更加灵活。案例：aggreateByKey(100)(_+_,_+_)
 >>>>>>>>>>>>>>>>>>>> 关于key的RDD算子，都存在于PairRDDFunctions中[这里里面其实存在一个隐式转换]
 
 combineByKey  ----》 需要输入三个参数，第一个参数分组后value的第一个元素，第二个函数为局部聚合函数，第三个函数为全局聚合函数
 
-
+====================> action 每一个action函数之多以是一个执行函数，是因为底层都调用了junJob方法
 count    ---> 返回rdd元素的数量
 top(2)   ---> 默认以数据的降序排序，取前两个
 take(2)  ---> 返回由数据集前n个元素组成的数组
+first    ---> 返回数据集中的第一个元素，类似于take(1)
+takeOrdered(3) ---> 和top类似，默认以升序进行排序，返回前三个
+
+saveAsTextFile ----> 将结果输出到文件的目录中
+sum ---》 求和
+max/min ---> 取最大值或最小值返回到driver端
+
+collect ---》 将结果返回到driver端
+
+aggregate 将聚合结果返回到driver端
+
+reduce --> 将结果返回到driver端
+fold --> 将结果返回到driver端
+
+foreach ---》 将数据一条一条的取出来，传出一个函数，这个函数返回一个Unit,比如传入一个打印的逻辑，打印的结果在executor端的日志中
+foreachPartition ---》 以分区为单位，每一个分区就是一个Tesk，以后就可以将数据输出到数据库中，一个分区一个连接，效率更高
+
+=========-- DAG --==========
+概念：有效无环图
+是多个RDD转换过程和依赖关系的描述
+触发Action就会形成一个完整的DAG，一个DAG就是一个job
+
+========================》》》》》》 阿里巴巴 fastjson 使用方法
+
+val oidAndCid lines.map( line => {
+//使用FastJSON解析数据
+val jsonObj = JSON.parseObject(line)
+
+// 获取json中的数据
+val oid = jsonObj.getString("oid").toString
+val cid = jsonObj.getInteger("cid").toInt
+val cid = jsonObj.getDouble("money").toDouble
+// 将结果放到一个元组里
+(oid,cid)
+})
+
+直接打印数组，打印的是内存地址，需要用到 .toBuffer
+
+如果使用scala编写实体类，除了要实现序列化，还要使用 @BeanProperty 注解会自动生产set和get方法
+
+当然有一种特殊的写法： 使用case class CaseOrderBean(cid: Int, money: Double, longitude:Double, latitude:Double)
+
+常用的处理方案(OrderBean 是事先创好的类，它需要实现 Serializable 序列化才能在网络间传输)：
+val beanRDD = lines.map(line => {
+	var bean = null
+	try {
+		bean = JSON.parseObject(line, classOf[OrderBean])
+	} catch {
+		case e: JSONException => {
+			//单独处理异常文件
+		}
+	}
+	bean
+})
+// 过滤有问题的数据
+val filtered =  beanRDD.filter(_ != null)
+val r = filtered.collect()
+println(r.toBuffer)
+sc.stop()
+
+===========>>>>>>
+将统计好的数输出到MySQL，可以采用以下方法：
+------------------》》》》》错误的方式：
+result.foreach(t => {
+val conn:Connection = null
+val statement = null
+try{
+	//创建一个Connection
+	conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/etl?characterEnncoding=UTF-8", "root", "root")
+	//创建一个state
+	statement = conn.prepareStatement("insert into t_result values (null, ?, ?, ?)")
+	//设置参数
+	statement.setString(1, t._1)
+	statement.setDouble(2, t._2)
+	statement.setDate(3, new Date(System.currentTimeMillis()))
+	//执行
+	statement.executeUpdate()
+
+} catch {
+case e: SQLException => {
+//将问题数据单独处理	
+	}
+} finally {
+//释放MySQL的资源
+if (statement != null) {
+	statement.close()
+}
+if (conn != null) {
+	conn.close()
+}
+
+}
+}
+
+})
+
+如果写入mysql的数据量比较大，一定要使用foreachPartition方法，foreach方法一次迭代一条数据
+如果写入mysql的数据量比较大，一定要使用foreachPartition方法，foreach方法一条迭代一条数据
+
+----------------》》》》》》正确的方式：
+//正确的姿势，将数据写入到MySQL,new Date是需要使用sql的包
+result.foreachPartition(dataToMYSQL)
+
+val dataToMYSQL = (it:Iterator[(String,Double)]) = {
+	val conn:Connection = null
+	val statement = null
+	try{
+		//创建一个Connection
+		conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/etl?characterEnncoding=UTF-8", "root", "root")
+		//创建一个statement
+		statement = conn.prepareStatement("insert into t_result values (null, ?, ?, ?)")
+		
+		// 将迭代器中的数据写入到MySQL
+		it.foreach(t => {
+			//设置参数
+			statement.setString(1, t._1)
+			statement.setDouble(2, t._2)
+			statement.setDate(3, new Date(System.currentTimeMillis()))
+			//执行
+			//一条一条处理
+			//statement.executeUpdate()
+			//批量写入
+			statement.addBatch()
+		})
+		statement.executeUpdate()
+		()
+	} catch {
+		case e: SQLException => {
+		//将问题数据单独处理	
+		}
+	} finally {
+		//释放MySQL的资源
+		if (statement != null) {
+			statement.close()
+		}
+		if (conn != null) {
+			conn.close()
+		}
+	}
+}
+
+//创建一个空迭代器的方法：
+var iterator: Iterator[CaseOrderBean] = Iterator.empty
+//判断迭代器是否为空
+if (it.nonEmpty) { } else {关闭流程}
+//判断迭代中是否有数据
+if(resultSet != null) {
+		resultSet.close()
+	}
+if(!it.hasNext){
+	if(statement != null) {
+		statement.close()
+	}
+	if(conn != null) {
+		conn.slose()
+	}
+}
+
+================>>>>>>> spark连接Hbase的工具类
+object HbaseUtil extends Serializabe {
+	// zkQuorum zookeeper地址，多个要用逗号分隔
+	// port zookeeper端口
+	def getConnection(zkQuorum: String,port: Int) : Connection = synchronized {
+		val conf = HBaseConfiguration.create()
+		conf.set("hbase.zookeeper.quorum", zkQuorum)
+		conf.set("hbase.zookeeper.property.clientPort", port.toString)
+		ConnectionFactory.createConnection(conf)
+	}
+}
+
+
+
+
+
+
